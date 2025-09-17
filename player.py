@@ -46,14 +46,14 @@ class Player:
         tools.setJsonData(path, data)
 
     @classmethod
-    def create(cls, userName, password):
+    def create(cls, username, password):
         """Factory method to create or authenticate a Player
 
         Creates a new player if they don't exist, or authenticates and loads
         an existing player if they do.
 
         Args:
-            userName: Player's username
+            username: Player's username
             password: Player's password
 
         Returns:
@@ -63,13 +63,13 @@ class Player:
             RuntimeError: If password is invalid for existing user
         """
         # Hash username to find/create data file
-        nameHash = tools.nameToHash(userName)
+        nameHash = tools.nameToHash(username)
         path = os.path.join(config.USER_DATA_PATH, nameHash + ".json")
 
         # Check if user already exists
         if not os.path.exists(path):
             # Create new player if no existing data
-            return cls(userName, password)
+            return cls(username, password)
         else:
             # Load existing user data
             data = tools.getJsonData(path)
@@ -83,7 +83,7 @@ class Player:
 
             # Return player instance with loaded data
             # Note: Original code uses default money - might want to use data["money"] here
-            return cls(userName, password)
+            return cls(username, password)
 
 
 class PlayerInGame:
