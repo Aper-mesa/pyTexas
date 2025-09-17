@@ -1,35 +1,86 @@
 import os
-import config
-import tools
+import config  # Import configuration module with constants
+import tools  # Import utility tools module
+
 
 class Player:
+    """Represents a player in the game with user account information and balance"""
+
     def __init__(self, userName, password, money=config.INIT_MONEY):
-        self.userName = userName
-        self.password = password
-        self.money = money
+        """Initialize a Player instance
+
+        Args:
+            userName: Player's username
+            password: Player's password
+            money: Initial balance, defaults to value from config
+        """
+        self.userName = userName  # Store username
+        self.password = password  # Store password
+        self.money = money  # Store player's balance (in-game currency)
 
     def storeData(self):
+        """Save player data to a JSON file with hashed credentials
+
+        Stores the user's information securely by hashing username and password
+        before saving to the filesystem
+        """
+        # Hash the username for secure storage/filenaming
         nameHash = tools.nameToHash(self.userName)
+        # Hash the password for secure storage
         pwdHash = tools.pwdToHash(self.password)
+
+        # Create full path to user's data file
         path = os.path.join(config.USER_DATA_PATH, nameHash + ".json")
+
+        # Ensure the user data directory exists
         tools.createPathIfNotExist(config.USER_DATA_PATH)
+
+        # Prepare data dictionary with hashed credentials and balance
         data = {
             "userName": nameHash,
             "password": pwdHash,
             "money": self.money
         }
+
+        # Save data to JSON file
         tools.setJsonData(path, data)
 
     @classmethod
     def create(cls, userName, password):
+        """Factory method to create or authenticate a Player
+
+        Creates a new player if they don't exist, or authenticates and loads
+        an existing player if they do.
+
+        Args:
+            userName: Player's username
+            password: Player's password
+
+        Returns:
+            Player instance
+
+        Raises:
+            RuntimeError: If password is invalid for existing user
+        """
+        # Hash username to find/create data file
         nameHash = tools.nameToHash(userName)
         path = os.path.join(config.USER_DATA_PATH, nameHash + ".json")
+
+        # Check if user already exists
         if not os.path.exists(path):
+            # Create new player if no existing data
             return cls(userName, password)
         else:
+            # Load existing user data
             data = tools.getJsonData(path)
+            # Hash provided password for comparison
             pwd = tools.pwdToHash(password)
             storedPwd = data["password"]
+
+            # Verify password matches stored hash
             if storedPwd != pwd:
                 raise RuntimeError("Invalid password")
+
+            # Return player instance with loaded data
+            # Note: Original code uses default money - might want to use data["money"] here
             return cls(userName, password)
