@@ -84,3 +84,18 @@ class Player:
             # Return player instance with loaded data
             # Note: Original code uses default money - might want to use data["money"] here
             return cls(userName, password)
+
+
+class PlayerInGame:
+    """Represents a player who is actively participating in a game session.
+    Extends the base Player class with game-specific attributes like hand cards.
+    """
+
+    def __init__(self, player):
+        """Initialize a PlayerInGame instance from a base Player object
+
+        Args:
+            player: A Player instance containing user account information and balance
+        """
+        self.player = player  # Reference to the base Player object (contains account/money data)
+        self.handCards = []  # List to hold the player's current cards in their hand during the game
