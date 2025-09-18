@@ -18,6 +18,10 @@ class Player:
         self.password = password  # Store password
         self.money = money  # Store player's balance (in-game currency)
 
+    def __str__(self):
+        """Return string representation of the player"""
+        return self.userName
+
     def storeData(self):
         """Save player data to a JSON file with hashed credentials
 
@@ -92,11 +96,13 @@ class PlayerInGame:
     Extends the base Player class with game-specific attributes like hand cards.
     """
 
-    def __init__(self, player):
+    def __init__(self, player, bet):
         """Initialize a PlayerInGame instance from a base Player object
 
         Args:
             player: A Player instance containing user account information and balance
+            bet: Initial balance, defaults to value from each game session
         """
         self.player = player  # Reference to the base Player object (contains account/money data)
         self.handCards = []  # List to hold the player's current cards in their hand during the game
+        self.currentBet = bet
