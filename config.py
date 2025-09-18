@@ -10,7 +10,7 @@ CARD_NUMBER_RANK_MAP = {  # Ranks of the card number
     "Q": 12, "K": 13, "A": 14
 }
 
-CARD_TYPE_MAP = {"♠", "♥", "♣", "♦"}    # Card types
+CARD_TYPE_MAP = {"Spade", "Heart", "Club", "Diamond"}    # Card types
 
 HAND_RANKINGS = {   # Pattern
     "Royal Flush": 10,

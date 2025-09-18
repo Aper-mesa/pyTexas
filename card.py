@@ -24,6 +24,14 @@ class Card:
         """
         return self.cardNumber, self.cardType
 
+    def __str__(self):
+        """Return a string representation of the card
+        Returns:
+            str: A string representation of the card(cardNumber, cardType)
+        """
+        return f"{self.cardNumber}_{self.cardType}"
+
+
     @classmethod
     def createCard(cls, cardNumber, cardType):
         """Factory method to create a Card instance with validation
