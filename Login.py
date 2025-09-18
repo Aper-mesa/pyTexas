@@ -3,14 +3,11 @@ import pygame as g
 import player
 
 # --- Constants ---
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
 COLOR_INACTIVE = g.Color('lightskyblue3')
 COLOR_ACTIVE = g.Color('dodgerblue2')
-
 
 class Login:
     """A class to manage the registration screen UI and logic."""
@@ -20,12 +17,10 @@ class Login:
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)  # Use the default font
 
-        # --- UI Elements ---
         self.username_box = g.Rect(300, 150, 200, 32)
         self.password_box = g.Rect(300, 250, 200, 32)
         self.confirm_button = g.Rect(350, 350, 100, 50)
 
-        # --- State Variables ---
         self.username_text = ''
         self.password_text = ''
         self.username_active = False
@@ -39,7 +34,6 @@ class Login:
                 self.running = False
                 return "STATE_QUIT", None
 
-            # --- Mouse Click Events ---
             if event.type == g.MOUSEBUTTONDOWN:
                 if self.username_box.collidepoint(event.pos):
                     self.username_active = True
@@ -48,12 +42,9 @@ class Login:
                     self.username_active = False
                     self.password_active = True
                 elif self.confirm_button.collidepoint(event.pos):
-                    # Action for the button: print to console
                     print(f"Registration confirmed! Username: '{self.username_text}'")
-                    self.register()
-                    return 'STATE_LOBBY', self.username_text
+                    if self.register(): return 'STATE_LOBBY', self.username_text
                 else:
-                    # Deactivate both boxes if clicked elsewhere
                     self.username_active = False
                     self.password_active = False
 
@@ -112,8 +103,10 @@ class Login:
         p = player.Player.create(username=self.username_text, password=self.password_text)
         if p:
             player.Player.storeData(p)
+            return True
         else:
             print("Password is incorrect, retry password or create a new account")
+            return False
 
     def run(self):
         """The main loop of the registration screen."""

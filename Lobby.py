@@ -5,8 +5,6 @@ import sys
 from pygame_networking import Server
 
 # --- Constants ---
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
@@ -15,19 +13,14 @@ COLOR_ACTIVE = g.Color('dodgerblue2')
 
 server = Server()
 
-class Login:
+class Lobby:
     """A class to manage the registration screen UI and logic."""
 
-    def __init__(self):
-        # Initialize g
-        g.init()
-        self.screen = g.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        g.display.set_caption("Lobby")
+    def __init__(self, screen):
+        self.screen = screen
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)  # Use the default font
 
-        # --- UI Elements ---
-        # Define rectangle for the confirm button
         self.create_session_button = g.Rect(250, 150, 300, 50)
         self.join_session_button = g.Rect(250, 250, 300, 50)
 
@@ -100,14 +93,11 @@ class Login:
     def run(self):
         """The main loop of the registration screen."""
         while self.running:
-            self.handle_events()
+            next_state, data = self.handle_events()
+            if next_state:
+                return next_state, data
+
             self.draw()
             self.clock.tick(60)  # FPS
 
-        g.quit()
-        sys.exit()
-
-# --- Main Execution ---
-if __name__ == "__main__":
-    reg_screen = Login()
-    reg_screen.run()
+        return "STATE_QUIT", None
