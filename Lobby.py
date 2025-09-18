@@ -1,8 +1,7 @@
-# Lobby.py
 import pygame as g
 import socket
 import threading
-from pygame_networking import Server  # MODIFICATION: Import both Server and Client
+from pygame_networking import Server
 
 # --- Constants ---
 WHITE = (255, 255, 255)
@@ -11,15 +10,13 @@ GRAY = (200, 200, 200)
 COLOR_INACTIVE = g.Color('lightskyblue3')
 COLOR_ACTIVE = g.Color('dodgerblue2')
 
+server = Server()
 
 class Lobby:
     def __init__(self, screen):
         self.screen = screen
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)
-
-        # MODIFICATION: Create server and client instances within the class
-        self.server = None
 
         # --- UI Elements ---
         self.create_session_button = g.Rect(250, 150, 300, 50)
@@ -37,9 +34,6 @@ class Lobby:
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
-                # MODIFICATION: Ensure server is shut down on quit
-                if self.server:
-                    self.server.shutdown()
                 return "STATE_QUIT", None
 
             if self.lobby_state == "main":  # Only handle buttons in the main state
@@ -101,14 +95,13 @@ class Lobby:
         """
         try:
             # The blocking call is now safely inside a thread
-            self.server.serve((self.get_local_ip(), '3333'))
+            server.serve((self.get_local_ip(), '3333'))
             print("Server thread has started.")
         except Exception as e:
             print(f"Error starting server thread: {e}")
 
     def createSession(self):
         """Creates the server and starts it in a new thread."""
-        self.server = Server()
 
         # MODIFICATION: Create a new thread for the server.
         # target=_start_server is the function the thread will run.
@@ -138,7 +131,7 @@ class Lobby:
         """
         try:
             # The port needs to be an integer, not a string.
-            self.server.connect((self.ip_text, '3333'))
+            server.connect((self.ip_text, '3333'))
             print(f"Attempting to join session at {self.ip_text}:3333")
             # Here you would transition to a "waiting in lobby" state
         except Exception as e:
