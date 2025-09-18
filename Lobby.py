@@ -1,10 +1,8 @@
 import socket
 
 import pygame as g
-import sys
 from pygame_networking import Server
 
-# --- Constants ---
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
@@ -13,8 +11,8 @@ COLOR_ACTIVE = g.Color('dodgerblue2')
 
 server = Server()
 
+
 class Lobby:
-    """A class to manage the registration screen UI and logic."""
 
     def __init__(self, screen):
         self.screen = screen
@@ -23,8 +21,11 @@ class Lobby:
 
         self.create_session_button = g.Rect(250, 150, 300, 50)
         self.join_session_button = g.Rect(250, 250, 300, 50)
+        self.ip_box = g.Rect(250, 350, 300, 50)
 
-        # --- State Variables ---
+        self.ip_text = ''
+        self.ip_active = False
+
         self.running = True
 
     def handle_events(self):
@@ -32,24 +33,31 @@ class Lobby:
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
+                return "STATE_QUIT", None
 
-            # --- Mouse Click Events ---
             if event.type == g.MOUSEBUTTONDOWN:
-                # Check if the user clicked the confirm button
                 if self.join_session_button.collidepoint(event.pos):
                     self.joinSession()
                 elif self.create_session_button.collidepoint(event.pos):
                     self.createSession()
+                elif self.ip_box.collidepoint(event.pos):
+                    self.ip_active = True
+                else:
+                    self.ip_active = False
+
+            if event.type == g.KEYDOWN:
+                if self.ip_active:
+                    if event.key == g.K_BACKSPACE:
+                        self.ip_text = self.ip_text[:-1]
+                    else:
+                        self.ip_text += event.unicode
+        return None, None
 
     def draw(self):
-        """Draw all elements to the screen."""
-        # Fill the background with white
         self.screen.fill(WHITE)
 
-        # --- Draw Confirm Button ---
         g.draw.rect(self.screen, GRAY, self.create_session_button)
         create_session_text = self.font.render("Create Session", True, BLACK)
-        # Center the text inside the button
         create_session_text_rect = create_session_text.get_rect(center=self.create_session_button.center)
         self.screen.blit(create_session_text, create_session_text_rect)
 
@@ -58,7 +66,18 @@ class Lobby:
         join_session_text_rect = join_session_text.get_rect(center=self.join_session_button.center)
         self.screen.blit(join_session_text, join_session_text_rect)
 
-        # Update the full display surface to the screen
+        ip_color = COLOR_ACTIVE if self.ip_active else COLOR_INACTIVE
+        g.draw.rect(self.screen, ip_color, self.ip_box, 2)
+        ip_surface = self.font.render(self.ip_text, True, BLACK)
+        self.screen.blit(ip_surface, (self.ip_box.x + 5, self.ip_box.y + 5))
+
+        # --- Draw Confirm Button ---
+        g.draw.rect(self.screen, GRAY, self.join_session_button)
+        join_session_text = self.font.render("Join", True, BLACK)
+        # Center the text inside the button
+        text_rect = join_session_text.get_rect(center=self.join_session_button.center)
+        self.screen.blit(join_session_text, text_rect)
+
         g.display.flip()
 
     def createSession(self):
@@ -89,6 +108,10 @@ class Lobby:
                 s.close()
         print(f"Host IP address: {ip_address}")
         return ip_address
+
+    def joinSession(self):
+        server.connect((self.ip_text, '3333'))
+        print("Join Session")
 
     def run(self):
         """The main loop of the registration screen."""
