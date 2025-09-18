@@ -14,6 +14,7 @@ server = Server()
 
 class Lobby:
     def __init__(self, screen):
+        self.players = []
         self.screen = screen
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)
@@ -51,7 +52,7 @@ class Lobby:
             elif self.lobby_state == 'hosting':
                 if event.type == g.MOUSEBUTTONDOWN:
                     if self.startButton.collidepoint(event.pos):
-                        print('start game')
+                        self.newGame()
 
                 if event.type == g.KEYDOWN:
                     if self.ip_active:
@@ -150,6 +151,7 @@ class Lobby:
 
     def newGame(self):
         print("New game started.")
+        return 'STATE_GAME', self.players
 
     def run(self):
         while self.running:

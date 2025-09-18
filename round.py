@@ -1,10 +1,9 @@
-import card  # Import the Card class for creating card instances
-import player # Import the two player class for creating player instances
-import config  # Import configuration with card type/rank definitions
+from random import choice  # For choosing the host
 from random import shuffle  # For shuffling the deck of cards
-from random import choice # For choosing the host
-from typing import List, Dict, Optional, Iterable # For round control
 
+import card  # Import the Card class for creating card instances
+import config  # Import configuration with card type/rank definitions
+import player  # Import the two player class for creating player instances
 
 class CardPool:
     """Represents a pool/deck of playing cards used in the game.
@@ -63,6 +62,7 @@ class CardPool:
             A list containing the first three Card instances
         """
         return self.cards[:3]
+
 
 from typing import List, Dict, Optional, Iterable
 
@@ -131,7 +131,7 @@ class Round:
         BTN = self._pos_map["BTN"]
 
         if n == 2:
-            SB = BTN               # In heads-up, BTN is SB
+            SB = BTN  # In heads-up, BTN is SB
             BB = self._pos_map["BB"]
             if street == "preflop":
                 return [SB, BB]
@@ -338,15 +338,5 @@ class Room:
         self.betPool = 0  # Clear the betting pool
         self.host = self.order.positions()["BTN"]  # Update host to button position (likely dealer)
 
-
-
-
-
-
-
-
-
-
-
-
-
+class Game:
+    print('you are in game')

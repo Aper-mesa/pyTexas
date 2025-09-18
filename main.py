@@ -2,9 +2,9 @@ import pygame
 import sys
 from Login import Login
 from Lobby import Lobby
+from round import Game
 
-
-def game():
+def main():
     pygame.init()
 
     screen_width = 800
@@ -18,12 +18,12 @@ def game():
             login  = Login(screen)
             next_state, data = login.run()
             current_state = next_state
-
         elif current_state == "STATE_LOBBY":
             lobby = Lobby(screen)
             next_state, data = lobby.run()
             current_state = next_state
-
+        elif current_state == 'STATE_GAME':
+            game = Game(screen)
         elif current_state == "STATE_QUIT":
             break
 
@@ -32,4 +32,4 @@ def game():
     sys.exit()
 
 if __name__ == "__main__":
-    game()
+    main()
