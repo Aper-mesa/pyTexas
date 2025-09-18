@@ -1,5 +1,5 @@
 import pygame as g
-import sys
+
 import player
 
 # --- Constants ---
@@ -17,16 +17,12 @@ class Login:
 
     def __init__(self, screen):
         self.screen = screen
-        g.display.set_caption("Registration")
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)  # Use the default font
 
         # --- UI Elements ---
-        # Define rectangles for the input boxes
         self.username_box = g.Rect(300, 150, 200, 32)
         self.password_box = g.Rect(300, 250, 200, 32)
-
-        # Define rectangle for the confirm button
         self.confirm_button = g.Rect(350, 350, 100, 50)
 
         # --- State Variables ---
@@ -55,6 +51,7 @@ class Login:
                     # Action for the button: print to console
                     print(f"Registration confirmed! Username: '{self.username_text}'")
                     self.register()
+                    return 'STATE_LOBBY', self.username_text
                 else:
                     # Deactivate both boxes if clicked elsewhere
                     self.username_active = False
@@ -72,6 +69,7 @@ class Login:
                         self.password_text = self.password_text[:-1]
                     else:
                         self.password_text += event.unicode
+        return None, None
 
     def draw(self):
         """Draw all elements to the screen."""
@@ -107,7 +105,6 @@ class Login:
         text_rect = confirm_text.get_rect(center=self.confirm_button.center)
         self.screen.blit(confirm_text, text_rect)
 
-        # Update the full display surface to the screen
         g.display.flip()
 
     def register(self):
@@ -121,14 +118,11 @@ class Login:
     def run(self):
         """The main loop of the registration screen."""
         while self.running:
-            self.handle_events()
+            next_state, data = self.handle_events()
+            if next_state:
+                return next_state, data
+
             self.draw()
             self.clock.tick(60)  # FPS
 
-        g.quit()
-        sys.exit()
-
-# --- Main Execution ---
-if __name__ == "__main__":
-    reg_screen = Login()
-    reg_screen.run()
+        return "STATE_QUIT", None

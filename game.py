@@ -1,7 +1,7 @@
 # main.py
 import pygame
 import sys
-import Login
+from Login import Login
 import Lobby
 
 
@@ -15,21 +15,21 @@ def game():
     screen = pygame.display.set_mode((screen_width, screen_height))
 
     # --- State Management ---
-    # Start the application in the "MENU" state
     current_state = "STATE_LOGIN"
 
     while True:  # The main loop that controls state transitions
         if current_state == "STATE_LOGIN":
             # Call the menu function. It will run its own loop and return the next state.
-            next_state = Login(screen)
+            login  = Login(screen)
+            next_state, data = login.run()
             current_state = next_state  # Update the state
 
-        elif current_state == "GAME":
+        elif current_state == "STATE_LOBBY":
             # Call the game function.
-            next_state = game_screen(screen)
+            next_state = Lobby(screen)
             current_state = next_state  # Update the state
 
-        elif current_state == "QUIT":
+        elif current_state == "STATE_QUIT":
             # If any screen returns "QUIT", break the main loop
             break
 
