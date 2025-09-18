@@ -177,7 +177,6 @@ class Round:
         """Iterate once through the prepared street order (doesn't modify cursor)."""
         return iter(list(self._order))
 
-    # ---------------- Internals ----------------
     def _computePositions(self) -> Dict[str, object]:
         """
         Compute positional map based on dealer.
@@ -222,28 +221,132 @@ class Round:
         s = self._idx[starter]
         return self.players[s:] + self.players[:s]
 
+    @classmethod
+    def createNextRound(cls, previous_round):
+        """
+        Create a new round with the given previous round.
+        """
+        players = previous_round.players
+        current_dealer = previous_round.dealer
+        current_index = previous_round._idx[current_dealer]
+        next_index = (current_index + 1) % len(players)
+        new_dealer = players[next_index]
+        return cls(players, new_dealer)
+
 
 class Room:
-    def __init__(self, players, bet=config.MAX_BET, initBet=config.INIT_BET):
-        self.maxBet = bet
-        self.players = players
-        self.playerInGames = {}
-        self.numPlayers = len(players)
-        self.minBet = initBet
-        self.host = choice(players)
-        self.round = Round(self.players, self.host)
-        self.betPool = 0
+    """Manages a game room where players participate in rounds, place bets, and compete.
+    Handles game state, player interactions, betting pools, and round progression.
+    """
 
+    def __init__(self, players, bet=config.MAX_BET, initBet=config.INIT_BET):
+        """Initialize a game room with participating players and betting parameters
+
+        Args:
+            players: List of Player instances participating in the room
+            bet: Maximum allowed bet per round (defaults to config value)
+            initBet: Initial minimum bet to start (defaults to config value)
+        """
+        self.maxBet = bet  # Maximum bet allowed in the room
+        self.players = players  # List of all players in the room
+        self.playerInGames = {}  # Maps Player objects to their in-game state (PlayerInGame)
+        self.numPlayers = len(players)  # Total number of players in the room
+        self.minBet = initBet  # Minimum initial bet required
+        self.currentBet = initBet  # Current bet amount required to stay in the round
+        self.host = choice(players)  # Randomly selected host/initiator of the room
+        self.order = Round(self.players, self.host)  # Manages turn order for the round
+        self.betPool = 0  # Total accumulated bets in the current round
+
+        # Initialize in-game state for each player
         for p in self.players:
             self.playerInGames[player] = player.PlayerInGame(p, self.maxBet)
 
     def chipIn(self, player, bet):
-        playerInGame = self.playerInGames[player]
+        """Process a player's bet and add it to the pool
+
+        Args:
+            player: Player instance placing the bet
+            bet: Amount the player wants to bet
+
+        Returns:
+            bool: True if bet is successful, False if insufficient funds
+        """
+        playerInGame = self.playerInGames[player]  # Get player's in-game state
+
+        # Check if player has enough remaining bet capacity
         if playerInGame.currentBet < bet:
             return False
+
+        # Deduct bet from player's available amount and add to pool
         playerInGame.currentBet -= bet
         self.betPool += bet
         return True
+
+    def endOfRound(self):
+        """Handle the end of a round, determine the winner, and distribute winnings
+
+        Returns:
+            bool: True if round ends successfully, False if multiple players remain
+        """
+        # Round can only end if one player remains
+        if len(self.playerInGames.values()) > 1:
+            return False
+
+        # Get the remaining player as winner
+        winnerKey = list(self.playerInGames.keys())[0]
+        winner = self.playerInGames[winnerKey]
+
+        # Update winner's money: deduct unused bet capacity, add total pool
+        winner.player.money -= (self.maxBet - winner.currentBet)
+        winner.player.money += self.betPool
+        winner.player.storeData()  # Save updated balance to storage
+
+        # Reset winner's hand for next round
+        winner.handCards = []
+        return True
+
+    def playerQuitRound(self, p):
+        """Handle a player quitting the current round
+
+        Args:
+            p: PlayerInGame instance quitting the round
+
+        Returns:
+            bool: True if player is successfully removed
+        """
+        # Remove player from current round
+        self.playerInGames.pop(p)
+
+        # Deduct their committed bet from their balance
+        p.player.money -= (self.maxBet - p.currentBet)
+        p.player.storeData()  # Save updated balance
+
+        # Reset their hand
+        p.handCards = []
+        return True
+
+    def newRound(self):
+        """Initialize a new round, resetting game state while keeping room players"""
+        # Reinitialize in-game states for all players
+        self.playerInGames = {}
+        for p in self.players:
+            self.playerInGames[player] = player.PlayerInGame(p, self.maxBet)
+
+        # Advance to next round order (likely rotating turns)
+        self.order = Round.createNextRound(self.order)
+        self.currentBet = self.minBet  # Reset to minimum bet
+        self.betPool = 0  # Clear the betting pool
+        self.host = self.order.positions()["BTN"]  # Update host to button position (likely dealer)
+
+
+
+
+
+
+
+
+
+
 
 
 
