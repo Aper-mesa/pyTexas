@@ -25,6 +25,8 @@ class Lobby:
         self.ip_text = ''
         self.ip_active = False
 
+        self.startButton = g.Rect(250, 350, 300, 50)
+
         # --- State Variables ---
         self.running = True
         # MODIFICATION: A new state to show after creating a session
@@ -46,6 +48,10 @@ class Lobby:
                         self.ip_active = True
                     else:
                         self.ip_active = False
+            elif self.lobby_state == 'hosting':
+                if event.type == g.MOUSEBUTTONDOWN:
+                    if self.startButton.collidepoint(event.pos):
+                        print('start game')
 
                 if event.type == g.KEYDOWN:
                     if self.ip_active:
@@ -75,6 +81,11 @@ class Lobby:
         host_ip_text = self.font.render(f"Server is running!", True, BLACK)
         ip_info_text = self.font.render(f"Your IP is: {self.get_local_ip()}", True, BLACK)
         wait_text = self.font.render("Waiting for players to join...", True, GRAY)
+
+        g.draw.rect(self.screen, GRAY, self.startButton)
+        start_text = self.font.render('Start', True, BLACK)
+        text_rect = start_text.get_rect(center=self.startButton.center)
+        self.screen.blit(start_text, text_rect)
 
         self.screen.blit(host_ip_text, (250, 150))
         self.screen.blit(ip_info_text, (250, 200))
@@ -136,6 +147,9 @@ class Lobby:
             # Here you would transition to a "waiting in lobby" state
         except Exception as e:
             print(f"Failed to join session: {e}")
+
+    def newGame(self):
+        print("New game started.")
 
     def run(self):
         while self.running:
