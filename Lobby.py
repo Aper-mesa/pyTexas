@@ -95,7 +95,7 @@ class Lobby:
         """
         try:
             # The blocking call is now safely inside a thread
-            server.serve((self.get_local_ip(), '3333'))
+            server.serve((self.get_local_ip(), 3333))
             print("Server thread has started.")
         except Exception as e:
             print(f"Error starting server thread: {e}")
@@ -131,7 +131,7 @@ class Lobby:
         """
         try:
             # The port needs to be an integer, not a string.
-            server.connect((self.ip_text, '3333'))
+            server.connect((self.ip_text, 3333))
             print(f"Attempting to join session at {self.ip_text}:3333")
             # Here you would transition to a "waiting in lobby" state
         except Exception as e:
