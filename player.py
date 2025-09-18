@@ -69,6 +69,7 @@ class Player:
         # Check if user already exists
         if not os.path.exists(path):
             # Create new player if no existing data
+            print('Creating new player account')
             return cls(username, password)
         else:
             # Load existing user data
@@ -79,11 +80,11 @@ class Player:
 
             # Verify password matches stored hash
             if storedPwd != pwd:
-                raise RuntimeError("Invalid password")
+                return False
 
             # Return player instance with loaded data
             # Note: Original code uses default money - might want to use data["money"] here
-            return cls(username, password)
+            return cls(username, password, money=data["money"])
 
 
 class PlayerInGame:
