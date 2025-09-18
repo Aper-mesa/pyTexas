@@ -1,126 +1,162 @@
-import socket
-
+# Lobby.py
 import pygame as g
-from pygame_networking import Server
+import socket
+import threading
+from pygame_networking import Server  # MODIFICATION: Import both Server and Client
 
+# --- Constants ---
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
 COLOR_INACTIVE = g.Color('lightskyblue3')
 COLOR_ACTIVE = g.Color('dodgerblue2')
 
-server = Server()
-
 
 class Lobby:
-
     def __init__(self, screen):
         self.screen = screen
         self.clock = g.time.Clock()
-        self.font = g.font.Font(None, 32)  # Use the default font
+        self.font = g.font.Font(None, 32)
 
+        # MODIFICATION: Create server and client instances within the class
+        self.server = None
+
+        # --- UI Elements ---
         self.create_session_button = g.Rect(250, 150, 300, 50)
         self.join_session_button = g.Rect(250, 250, 300, 50)
         self.ip_box = g.Rect(250, 350, 300, 50)
-
         self.ip_text = ''
         self.ip_active = False
 
+        # --- State Variables ---
         self.running = True
+        # MODIFICATION: A new state to show after creating a session
+        self.lobby_state = "main"  # "main" or "hosting"
 
     def handle_events(self):
-        """Process all events from the event queue."""
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
+                # MODIFICATION: Ensure server is shut down on quit
+                if self.server:
+                    self.server.shutdown()
                 return "STATE_QUIT", None
 
-            if event.type == g.MOUSEBUTTONDOWN:
-                if self.join_session_button.collidepoint(event.pos):
-                    self.joinSession()
-                elif self.create_session_button.collidepoint(event.pos):
-                    self.createSession()
-                elif self.ip_box.collidepoint(event.pos):
-                    self.ip_active = True
-                else:
-                    self.ip_active = False
-
-            if event.type == g.KEYDOWN:
-                if self.ip_active:
-                    if event.key == g.K_BACKSPACE:
-                        self.ip_text = self.ip_text[:-1]
+            if self.lobby_state == "main":  # Only handle buttons in the main state
+                if event.type == g.MOUSEBUTTONDOWN:
+                    if self.join_session_button.collidepoint(event.pos):
+                        self.joinSession()
+                    elif self.create_session_button.collidepoint(event.pos):
+                        self.createSession()
+                    elif self.ip_box.collidepoint(event.pos):
+                        self.ip_active = True
                     else:
-                        self.ip_text += event.unicode
+                        self.ip_active = False
+
+                if event.type == g.KEYDOWN:
+                    if self.ip_active:
+                        if event.key == g.K_BACKSPACE:
+                            self.ip_text = self.ip_text[:-1]
+                        else:
+                            self.ip_text += event.unicode
         return None, None
 
-    def draw(self):
-        self.screen.fill(WHITE)
-
+    def draw_main_lobby(self):
+        """Draws the initial lobby screen with buttons."""
         g.draw.rect(self.screen, GRAY, self.create_session_button)
-        create_session_text = self.font.render("Create Session", True, BLACK)
-        create_session_text_rect = create_session_text.get_rect(center=self.create_session_button.center)
-        self.screen.blit(create_session_text, create_session_text_rect)
+        create_text = self.font.render("Create Session", True, BLACK)
+        self.screen.blit(create_text, create_text.get_rect(center=self.create_session_button.center))
 
         g.draw.rect(self.screen, GRAY, self.join_session_button)
-        join_session_text = self.font.render("Join Session", True, BLACK)
-        join_session_text_rect = join_session_text.get_rect(center=self.join_session_button.center)
-        self.screen.blit(join_session_text, join_session_text_rect)
+        join_text = self.font.render("Join Session", True, BLACK)
+        self.screen.blit(join_text, join_text.get_rect(center=self.join_session_button.center))
 
         ip_color = COLOR_ACTIVE if self.ip_active else COLOR_INACTIVE
         g.draw.rect(self.screen, ip_color, self.ip_box, 2)
         ip_surface = self.font.render(self.ip_text, True, BLACK)
         self.screen.blit(ip_surface, (self.ip_box.x + 5, self.ip_box.y + 5))
 
-        # --- Draw Confirm Button ---
-        g.draw.rect(self.screen, GRAY, self.join_session_button)
-        join_session_text = self.font.render("Join", True, BLACK)
-        # Center the text inside the button
-        text_rect = join_session_text.get_rect(center=self.join_session_button.center)
-        self.screen.blit(join_session_text, text_rect)
+    def draw_hosting_lobby(self):
+        """Draws the screen after the host has created a session."""
+        host_ip_text = self.font.render(f"Server is running!", True, BLACK)
+        ip_info_text = self.font.render(f"Your IP is: {self.get_local_ip()}", True, BLACK)
+        wait_text = self.font.render("Waiting for players to join...", True, GRAY)
 
+        self.screen.blit(host_ip_text, (250, 150))
+        self.screen.blit(ip_info_text, (250, 200))
+        self.screen.blit(wait_text, (250, 300))
+
+    def draw(self):
+        self.screen.fill(WHITE)
+        if self.lobby_state == "main":
+            self.draw_main_lobby()
+        elif self.lobby_state == "hosting":
+            self.draw_hosting_lobby()
         g.display.flip()
 
+    def _start_server(self):
+        """
+        This function will run in a separate thread.
+        It contains the blocking 'serve' call.
+        """
+        try:
+            # The blocking call is now safely inside a thread
+            self.server.serve((self.get_local_ip(), 3333))
+            print("Server thread has started.")
+        except Exception as e:
+            print(f"Error starting server thread: {e}")
+
     def createSession(self):
-        server.serve((self.get_local_ip(), 3333))
+        """Creates the server and starts it in a new thread."""
+        self.server = Server()
+
+        # MODIFICATION: Create a new thread for the server.
+        # target=_start_server is the function the thread will run.
+        # daemon=True means the thread will exit when the main program exits.
+        server_thread = threading.Thread(target=self._start_server, daemon=True)
+        server_thread.start()
+
+        print("Create Session button clicked, server thread starting in background...")
+        self.lobby_state = "hosting"  # Change the screen state
 
     def get_local_ip(self):
-        """
-        A reliable way to get the local IP address of the machine.
-        """
         s = None
         try:
-            # Create a UDP socket (no actual connection is made)
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # Connect to a public DNS server
-            # This doesn't send any data, it just finds the right local interface
             s.connect(("8.8.8.8", 80))
-            # Get the socket's own address
             ip_address = s.getsockname()[0]
-        except Exception as e:
-            print(f"Could not get IP address: {e}")
-            # Fallback: get IP from hostname (less reliable)
-            try:
-                ip_address = socket.gethostbyname(socket.gethostname())
-            except Exception:
-                ip_address = "127.0.0.1"  # If all else fails
+        except Exception:
+            ip_address = "127.0.0.1"
         finally:
             if s:
                 s.close()
-        print(f"Host IP address: {ip_address}")
         return ip_address
 
     def joinSession(self):
-        server.connect((self.ip_text, '3333'))
-        print("Join Session")
+        """
+        MODIFICATION: Correctly uses a Client object to connect.
+        """
+        try:
+            # The port needs to be an integer, not a string.
+            self.server.connect((self.ip_text, 3333))
+            print(f"Attempting to join session at {self.ip_text}:3333")
+            # Here you would transition to a "waiting in lobby" state
+        except Exception as e:
+            print(f"Failed to join session: {e}")
 
     def run(self):
-        """The main loop of the registration screen."""
         while self.running:
             next_state, data = self.handle_events()
             if next_state:
                 return next_state, data
 
+            # You can also update networking info here, e.g., check for new players
+            # if self.server:
+            #     client_id, msg = self.server.get_message()
+            #     if client_id:
+            #         print(f"Received from {client_id}: {msg}")
+
             self.draw()
-            self.clock.tick(60)  # FPS
+            self.clock.tick(60)
 
         return "STATE_QUIT", None
