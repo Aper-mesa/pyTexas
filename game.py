@@ -2,7 +2,7 @@
 import pygame
 import sys
 from Login import Login
-import Lobby
+from Lobby import Lobby
 
 
 def game():
@@ -19,14 +19,13 @@ def game():
 
     while True:  # The main loop that controls state transitions
         if current_state == "STATE_LOGIN":
-            # Call the menu function. It will run its own loop and return the next state.
             login  = Login(screen)
             next_state, data = login.run()
             current_state = next_state  # Update the state
 
         elif current_state == "STATE_LOBBY":
-            # Call the game function.
-            next_state = Lobby(screen)
+            lobby = Lobby(screen)
+            next_state, data = lobby.run()
             current_state = next_state  # Update the state
 
         elif current_state == "STATE_QUIT":
