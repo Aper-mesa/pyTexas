@@ -37,7 +37,7 @@ class Player:
 
         # Prepare data dictionary with hashed credentials and balance
         data = {
-            "userName": nameHash,
+            "userName": self.userName,
             "password": pwdHash,
             "money": self.money
         }
