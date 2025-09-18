@@ -15,10 +15,8 @@ COLOR_ACTIVE = g.Color('dodgerblue2')
 class Login:
     """A class to manage the registration screen UI and logic."""
 
-    def __init__(self):
-        # Initialize g
-        g.init()
-        self.screen = g.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    def __init__(self, screen):
+        self.screen = screen
         g.display.set_caption("Registration")
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)  # Use the default font
@@ -43,18 +41,16 @@ class Login:
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
+                return "STATE_QUIT", None
 
             # --- Mouse Click Events ---
             if event.type == g.MOUSEBUTTONDOWN:
-                # Check if the user clicked on the username input box
                 if self.username_box.collidepoint(event.pos):
                     self.username_active = True
                     self.password_active = False
-                # Check if the user clicked on the password input box
                 elif self.password_box.collidepoint(event.pos):
                     self.username_active = False
                     self.password_active = True
-                # Check if the user clicked the confirm button
                 elif self.confirm_button.collidepoint(event.pos):
                     # Action for the button: print to console
                     print(f"Registration confirmed! Username: '{self.username_text}'")
