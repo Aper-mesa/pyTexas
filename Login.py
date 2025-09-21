@@ -1,9 +1,7 @@
 import pygame as g
 import player
-import os  # 1. 导入 os 模块
+import os
 
-# 2. 【最关键的一步】设置环境变量，强制显示输入法UI
-# 这必须在 pygame.init() 之前执行
 os.environ["SDL_IME_SHOW_UI"] = "1"
 
 # --- Constants ---
@@ -19,15 +17,9 @@ class Login:
         self.screen = screen
         self.clock = g.time.Clock()
 
-        # 字体加载（使用之前最佳实践的方法）
-        try:
-            script_dir = os.path.dirname(__file__)
-            font_path = os.path.join(script_dir, 'msyh.ttc')
-            self.font = g.font.Font(font_path, 24)
-            print(f"成功加载中文字体: {font_path}")
-        except FileNotFoundError:
-            print("警告: 未找到中文字体 'msyh.ttc'，退回默认字体。")
-            self.font = g.font.Font(None, 32)
+        script_dir = os.path.dirname(__file__)
+        font_path = os.path.join(script_dir, 'msyh.ttc')
+        self.font = g.font.Font(font_path, 24)
 
         # --- UI Elements ---
         self.username_box = g.Rect(300, 150, 200, 32)
@@ -37,7 +29,6 @@ class Login:
         # --- State ---
         self.username_text = ''
         self.password_text = ''
-        # 3. 新增变量，用于存储正在输入的拼音
         self.username_editing_text = ''
         self.password_editing_text = ''
 
