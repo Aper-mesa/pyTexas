@@ -36,6 +36,8 @@ class Login:
         self.password_active = False
         self.running = True
 
+        self.currentPlayer = None
+
     def handle_events(self):
         for event in g.event.get():
             if event.type == g.QUIT:
@@ -133,6 +135,7 @@ class Login:
         p = player.Player.create(username=self.username_text, password=self.password_text)
         if p:
             player.Player.storeData(p)
+            self.currentPlayer = p
             return True
         else:
             print("Password is incorrect, retry password or create a new account")

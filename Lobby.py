@@ -13,8 +13,9 @@ COLOR_ACTIVE = g.Color('dodgerblue2')
 server = Server()
 
 class Lobby:
-    def __init__(self, screen):
+    def __init__(self, screen, player):
         self.players = []
+        self.localPlayer = player
         self.screen = screen
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)

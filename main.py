@@ -13,15 +13,20 @@ def main():
 
     current_state = "STATE_LOGIN"
 
+    logginInstance = None
+
     while True:
         if current_state == "STATE_LOGIN":
             login  = Login(screen)
+            logginInstance = login
             next_state, data = login.run()
             current_state = next_state
         elif current_state == "STATE_LOBBY":
-            lobby = Lobby(screen)
-            next_state, data = lobby.run()
-            current_state = next_state
+            if logginInstance:
+                if logginInstance.currentPlayer:
+                    lobby = Lobby(screen, logginInstance.currentPlayer)
+                    next_state, data = lobby.run()
+                    current_state = next_state
         elif current_state == 'STATE_GAME':
             game = Game(screen)
         elif current_state == "STATE_QUIT":
