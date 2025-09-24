@@ -28,6 +28,7 @@ class Lobby:
         self.create_session_button = g.Rect(250, 150, 300, 50)
         self.join_session_button = g.Rect(250, 250, 300, 50)
         self.ip_box = g.Rect(250, 350, 300, 50)
+        self.store_box = g.Rect(250, 450, 100, 50)
         self.ip_text = ''
         self.ip_active = False
 
@@ -58,6 +59,8 @@ class Lobby:
                         self.createSession()
                     elif self.ip_box.collidepoint(event.pos):
                         self.ip_active = True
+                    elif self.store_box.collidepoint(event.pos):
+                        self.storeIP()
                     else:
                         self.ip_active = False
             elif self.lobby_state == 'hosting':
@@ -76,6 +79,10 @@ class Lobby:
         g.draw.rect(self.screen, GRAY, self.join_session_button)
         join_text = self.font.render("Join Session", True, BLACK)
         self.screen.blit(join_text, join_text.get_rect(center=self.join_session_button.center))
+
+        g.draw.rect(self.screen, GRAY, self.store_box)
+        store_text = self.font.render("Store IP", True, BLACK)
+        self.screen.blit(store_text, store_text.get_rect(center=self.store_box.center))
 
         ip_color = COLOR_ACTIVE if self.ip_active else COLOR_INACTIVE
         g.draw.rect(self.screen, ip_color, self.ip_box, 2)
@@ -165,3 +172,6 @@ class Lobby:
     def createUsers(self, ip_addresses):
         for ip in ip_addresses:
             print(server.get(ip))
+
+    def storeIP(self):
+        self.localPlayer.setIP(self.ip_text)
