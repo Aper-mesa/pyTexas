@@ -145,6 +145,7 @@ class Lobby:
         try:
             # The port needs to be an integer, not a string.
             server.connect((self.ip_text, 3333))
+            server.sync(self.ip_text, self.localPlayer.player.getJSONData())
             print(f"Attempting to join session at {self.ip_text}:3333")
             # Here you would transition to a "waiting in lobby" state
         except Exception as e:
