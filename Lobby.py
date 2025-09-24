@@ -15,6 +15,7 @@ COLOR_ACTIVE = g.Color('dodgerblue2')
 
 server = Server()
 
+
 class Lobby:
     def __init__(self, screen, player):
         self.tick = 0
@@ -118,7 +119,8 @@ class Lobby:
             if self.localPlayer.getIP != self.ip_text:
                 self.localPlayer.setIP(self.ip_text)
             # 房主先把自己放进数组
-            self.players.append(player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money))
+            self.players.append(
+                player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money))
             server.serve((self.ip_text, 3333))
         except Exception as e:
             print(f"Error starting server thread: {e}")
@@ -143,7 +145,6 @@ class Lobby:
         server.connect((self.ip_text, 3333))
         if server.connected:
             # 客户端进房间以后把自己的用户信息发送给服务器
-            print(str(self.localPlayer.getJSONData()))
             server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
 
     def newGame(self):
@@ -157,7 +158,7 @@ class Lobby:
                 return next_state, data
 
             # 服务器逻辑
-            if self.lobby_state== 'hosting':
+            if self.lobby_state == 'hosting':
                 # 0.5秒执行一次
                 if self.tick < 30:
                     self.tick += 1
@@ -174,9 +175,28 @@ class Lobby:
         return "STATE_QUIT", None
 
     def createUsers(self, ip_addresses):
-        for ip in ip_addresses:
-            self.players.append(player.PlayerInGame(server.get(ip).split(',')[0], server.get(ip).split(',')[1], server.get(ip).split(',')[2]))
-        print(self.players)
+        existing_ips = {p.ip for p in self.players}
 
-    def storeIP(self):
-        self.localPlayer.setIP(self.ip_text)
+        for ip in ip_addresses:
+            try:
+                if ip not in existing_ips:
+                    player_data_string = server.get(ip)
+                    data_parts = player_data_string.split(',')
+                    username = data_parts[0]
+                    money = data_parts[2]
+
+                    new_player = player.PlayerInGame(
+                        username=username,
+                        ip=ip,
+                        bet=money
+                    )
+                    self.players.append(new_player)
+
+                    existing_ips.add(ip)
+
+            except (IndexError, TypeError) as e:
+                print(f"处理IP {ip} 时出错: {e}")
+
+
+def storeIP(self):
+    self.localPlayer.setIP(self.ip_text)
