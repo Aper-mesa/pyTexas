@@ -12,6 +12,7 @@ COLOR_ACTIVE = g.Color('dodgerblue2')
 
 server = Server()
 
+
 class Lobby:
     def __init__(self, screen, player):
         self.players = []
@@ -40,6 +41,13 @@ class Lobby:
                 self.running = False
                 return "STATE_QUIT", None
 
+            if event.type == g.KEYDOWN:
+                if self.ip_active:
+                    if event.key == g.K_BACKSPACE:
+                        self.ip_text = self.ip_text[:-1]
+                    else:
+                        self.ip_text += event.unicode
+
             if self.lobby_state == "main":  # Only handle buttons in the main state
                 if event.type == g.MOUSEBUTTONDOWN:
                     if self.join_session_button.collidepoint(event.pos):
@@ -55,12 +63,6 @@ class Lobby:
                     if self.startButton.collidepoint(event.pos):
                         self.newGame()
 
-                if event.type == g.KEYDOWN:
-                    if self.ip_active:
-                        if event.key == g.K_BACKSPACE:
-                            self.ip_text = self.ip_text[:-1]
-                        else:
-                            self.ip_text += event.unicode
         return None, None
 
     def draw_main_lobby(self):
@@ -143,8 +145,8 @@ class Lobby:
         MODIFICATION: Correctly uses a Client object to connect.
         """
         try:
-            # The port needs to be an integer, not a string.
             server.connect((self.ip_text, 3333))
+            print(server.connections)
             server.sync(self.ip_text, self.localPlayer.player.getJSONData())
             print(f"Attempting to join session at {self.ip_text}:3333")
             # Here you would transition to a "waiting in lobby" state
@@ -160,12 +162,6 @@ class Lobby:
             next_state, data = self.handle_events()
             if next_state:
                 return next_state, data
-
-            # You can also update networking info here, e.g., check for new players
-            # if self.server:
-            #     client_id, msg = self.server.get_message()
-            #     if client_id:
-            #         print(f"Received from {client_id}: {msg}")
 
             self.draw()
             self.clock.tick(60)
