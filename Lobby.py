@@ -17,6 +17,7 @@ server = Server()
 
 class Lobby:
     def __init__(self, screen, player):
+        self.tick = 0
         self.players = []
         self.localPlayer = player
         self.screen = screen
@@ -106,31 +107,25 @@ class Lobby:
 
     def _start_server(self):
         try:
+            # 若房主输入了新的IP地址加入，则更新存储的用户IP
+            if self.localPlayer.getIP != self.ip_text:
+                self.localPlayer.setIP(self.ip_text)
             server.serve((self.ip_text, 3333))
-            print("Server thread has started.")
         except Exception as e:
             print(f"Error starting server thread: {e}")
 
     def createSession(self):
-        if self.ip_text == '':
-            print('Input IP address to host')
+        # 房主不输入IP地址就默认调用用户数据中存储的地址
+        if self.ip_text == '' and self.localPlayer.getIP != '127.0.0.1':
+            self.ip_text = self.localPlayer.getIP()
+        # 若房主的IP地址未初始化，则要求房主手动输入IP地址
+        elif self.ip_text == '' and self.localPlayer.getIP == '127.0.0.1':
+            print('Input a valid IP to host')
             return
+        # 上面两个如果都没执行说明房主手动输入了IP
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         self.lobby_state = "hosting"
-
-    def get_local_ip(self):
-        s = None
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip_address = s.getsockname()[0]
-        except Exception:
-            ip_address = "127.0.0.1"
-        finally:
-            if s:
-                s.close()
-        return ip_address
 
     def joinSession(self):
         if self.ip_text == '':
@@ -138,6 +133,7 @@ class Lobby:
             return
         server.connect((self.ip_text, 3333))
         if server.connected:
+            # 客户端进房间以后把自己的用户信息发送给服务器
             server.sync(self.localPlayer.ip, self.localPlayer.getJSONData())
 
     def newGame(self):
@@ -152,9 +148,14 @@ class Lobby:
 
             # 服务器逻辑
             if self.lobby_state== 'hosting':
-                data = str(server.connections)
-                ip_addresses = re.findall(r"raddr=\('([\d\.]+)',", data)
-                self.createUsers(ip_addresses)
+                # 0.2秒执行一次
+                if self.tick < 12:
+                    self.tick += 1
+                else:
+                    data = str(server.connections)
+                    ip_addresses = re.findall(r"raddr=\('([\d\.]+)',", data)
+                    self.createUsers(ip_addresses)
+                    self.tick = 0
 
             self.draw()
             self.clock.tick(60)
@@ -163,4 +164,4 @@ class Lobby:
 
     def createUsers(self, ip_addresses):
         for ip in ip_addresses:
-            pass
+            print(server.get(ip))

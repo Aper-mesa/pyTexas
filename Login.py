@@ -1,8 +1,8 @@
-import socket
+import os
 
 import pygame as g
+
 import player
-import os
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
 
@@ -133,8 +133,7 @@ class Login:
         g.display.flip()
 
     def register(self):
-        # ... (此方法无需改动)
-        ip = self.get_local_ip()
+        ip = '127.0.0.1'
         p = player.Player.create(username=self.username_text, password=self.password_text, ip=ip)
         if p:
             player.Player.storeData(p)
@@ -143,19 +142,6 @@ class Login:
         else:
             print("Password is incorrect, retry password or create a new account")
             return False
-
-    def get_local_ip(self):
-        s = None
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip_address = s.getsockname()[0]
-        except Exception:
-            ip_address = "127.0.0.1"
-        finally:
-            if s:
-                s.close()
-        return ip_address
 
     def run(self):
         while self.running:

@@ -100,6 +100,13 @@ class Player:
         data = tools.getJsonData(path)
         return data
 
+    def setIP(self, ip):
+        self.ip = ip
+        self.storeData()
+        print('IP address has been updated')
+
+    def getIP(self):
+        return self.ip
 
 class PlayerInGame:
     """Represents a player who is actively participating in a game session.
