@@ -1,3 +1,5 @@
+import re
+
 import pygame as g
 import socket
 import threading
@@ -156,7 +158,12 @@ class Lobby:
 
             # 服务器逻辑
             if self.lobby_state== 'hosting':
-                print(server.connections)
+                data = str(server.connections)
+                ip_addresses = re.findall(r"raddr=\('([\d\.]+)',", data)
+                print(ip_addresses)
+
+                # 输出结果
+                print(ip_addresses)
 
             self.draw()
             self.clock.tick(60)
