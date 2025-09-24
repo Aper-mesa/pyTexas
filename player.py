@@ -120,8 +120,8 @@ class Player:
         return self.ip
 
 class PlayerInGame:
-    def __init__(self, username, ip, bet):
+    def __init__(self, username, ip, money):
         self.username = username
         self.ip = ip
-        self.currentBet = bet
+        self.money = money
         self.handCards = []

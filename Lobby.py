@@ -1,9 +1,9 @@
 import re
+import threading
 
 import pygame as g
-import socket
-import threading
 from pygame_networking import Server
+
 import player
 
 # --- Constants ---
@@ -188,15 +188,17 @@ class Lobby:
                     new_player = player.PlayerInGame(
                         username=username,
                         ip=ip,
-                        bet=money
+                        money=money
                     )
                     self.players.append(new_player)
-
+                    for p in self.players:
+                        print(p.username)
+                        print(p.ip)
+                        print(p.money)
                     existing_ips.add(ip)
 
             except (IndexError, TypeError) as e:
                 print(f"处理IP {ip} 时出错: {e}")
 
-
-def storeIP(self):
-    self.localPlayer.setIP(self.ip_text)
+    def storeIP(self):
+        self.localPlayer.setIP(self.ip_text)
