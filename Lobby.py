@@ -30,8 +30,6 @@ class Lobby:
 
         self.startButton = g.Rect(250, 350, 300, 50)
 
-        self.init = False
-
         # --- State Variables ---
         self.running = True
         # MODIFICATION: A new state to show after creating a session
@@ -129,8 +127,6 @@ class Lobby:
 
         print("Create Session button clicked, server thread starting in background...")
         self.lobby_state = "hosting"  # Change the screen state
-        server.sync("var", "fuck")
-        self.init = True
 
     def get_local_ip(self):
         s = None
@@ -146,18 +142,7 @@ class Lobby:
         return ip_address
 
     def joinSession(self):
-        """
-        MODIFICATION: Correctly uses a Client object to connect.
-        """
-        try:
-            server.connect((self.ip_text, 3333))
-            print(server.connections)
-            server.set("var", "Baha")
-            server.sync(self.ip_text, self.localPlayer.player.getJSONData())
-            print(f"Attempting to join session at {self.ip_text}:3333")
-            # Here you would transition to a "waiting in lobby" state
-        except Exception as e:
-            print(f"Failed to join session: {e}")
+        server.connect((self.ip_text, 3333))
 
     def newGame(self):
         print("New game started.")
@@ -165,11 +150,13 @@ class Lobby:
 
     def run(self):
         while self.running:
-            if self.init:
-                print(server.get("var"))
             next_state, data = self.handle_events()
             if next_state:
                 return next_state, data
+
+            # 服务器逻辑
+            if self.lobby_state== 'hosting':
+                print(server.connections)
 
             self.draw()
             self.clock.tick(60)
