@@ -4,6 +4,7 @@ import pygame as g
 import socket
 import threading
 from pygame_networking import Server
+import player
 
 # --- Constants ---
 WHITE = (255, 255, 255)
@@ -13,7 +14,6 @@ COLOR_INACTIVE = g.Color('lightskyblue3')
 COLOR_ACTIVE = g.Color('dodgerblue2')
 
 server = Server()
-
 
 class Lobby:
     def __init__(self, screen, player):
@@ -34,7 +34,6 @@ class Lobby:
 
         # --- State Variables ---
         self.running = True
-        # MODIFICATION: A new state to show after creating a session
         self.lobby_state = "main"  # "main" or "hosting"
 
     def handle_events(self):
@@ -106,29 +105,17 @@ class Lobby:
         g.display.flip()
 
     def _start_server(self):
-        """
-        This function will run in a separate thread.
-        It contains the blocking 'serve' call.
-        """
         try:
             # The blocking call is now safely inside a thread
-            server.serve((self.get_local_ip(), 3333))
+            server.serve((self.ip_box, 3333))
             print("Server thread has started.")
         except Exception as e:
             print(f"Error starting server thread: {e}")
 
     def createSession(self):
-        """Creates the server and starts it in a new thread."""
-
-        # MODIFICATION: Create a new thread for the server.
-        # target=_start_server is the function the thread will run.
-        # daemon=True means the thread will exit when the main program exits.
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
-
-
-        print("Create Session button clicked, server thread starting in background...")
-        self.lobby_state = "hosting"  # Change the screen state
+        self.lobby_state = "hosting"
 
     def get_local_ip(self):
         s = None
@@ -145,6 +132,8 @@ class Lobby:
 
     def joinSession(self):
         server.connect((self.ip_text, 3333))
+        if server.connected:
+            server.sync(self.localPlayer.player.ip, self.localPlayer.player.getJSONData())
 
     def newGame(self):
         print("New game started.")
@@ -160,12 +149,13 @@ class Lobby:
             if self.lobby_state== 'hosting':
                 data = str(server.connections)
                 ip_addresses = re.findall(r"raddr=\('([\d\.]+)',", data)
-                print(ip_addresses)
-
-                # 输出结果
-                print(ip_addresses)
+                self.createUsers(ip_addresses)
 
             self.draw()
             self.clock.tick(60)
 
         return "STATE_QUIT", None
+
+    def createUsers(self, ip_addresses):
+        for ip in ip_addresses:
+            pass
