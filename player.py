@@ -16,8 +16,8 @@ class Player:
         """
         self.userName = userName  # Store username
         self.password = password  # Store password
-        self.money = money  # Store player's balance (in-game currency)
         self.ip = ip
+        self.money = money  # Store player's balance (in-game currency)
 
     def __str__(self):
         """Return string representation of the player"""
@@ -120,18 +120,8 @@ class Player:
         return self.ip
 
 class PlayerInGame:
-    """Represents a player who is actively participating in a game session.
-    Extends the base Player class with game-specific attributes like hand cards.
-    """
-
-    def __init__(self, player, ip, bet):
-        """Initialize a PlayerInGame instance from a base Player object
-
-        Args:
-            player: A Player instance containing user account information and balance
-            bet: Initial balance, defaults to value from each game session
-        """
-        self.player = player# Reference to the base Player object (contains account/money data)
+    def __init__(self, username, ip, bet):
+        self.username = username
         self.ip = ip
-        self.handCards = []  # List to hold the player's current cards in their hand during the game
         self.currentBet = bet
+        self.handCards = []

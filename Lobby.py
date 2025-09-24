@@ -117,6 +117,8 @@ class Lobby:
             # 若房主输入了新的IP地址加入，则更新存储的用户IP
             if self.localPlayer.getIP != self.ip_text:
                 self.localPlayer.setIP(self.ip_text)
+            # 房主先把自己放进数组
+            self.players.append(player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money))
             server.serve((self.ip_text, 3333))
         except Exception as e:
             print(f"Error starting server thread: {e}")
@@ -173,7 +175,8 @@ class Lobby:
 
     def createUsers(self, ip_addresses):
         for ip in ip_addresses:
-            print(server.get(ip))
+            self.players.append(player.PlayerInGame(server.get(ip).split(',')[0], server.get(ip).split(',')[1], server.get(ip).split(',')[2]))
+        print(self.players)
 
     def storeIP(self):
         self.localPlayer.setIP(self.ip_text)
