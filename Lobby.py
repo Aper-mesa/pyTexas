@@ -141,7 +141,8 @@ class Lobby:
         server.connect((self.ip_text, 3333))
         if server.connected:
             # 客户端进房间以后把自己的用户信息发送给服务器
-            server.sync(self.localPlayer.ip, self.localPlayer.getJSONData())
+            print(str(self.localPlayer.getJSONData()))
+            server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
 
     def newGame(self):
         print("New game started.")
@@ -155,8 +156,8 @@ class Lobby:
 
             # 服务器逻辑
             if self.lobby_state== 'hosting':
-                # 0.2秒执行一次
-                if self.tick < 12:
+                # 0.5秒执行一次
+                if self.tick < 30:
                     self.tick += 1
                 else:
                     data = str(server.connections)
@@ -165,6 +166,7 @@ class Lobby:
                     self.tick = 0
 
             self.draw()
+            # 游戏帧率，60帧畅玩3A大作
             self.clock.tick(60)
 
         return "STATE_QUIT", None

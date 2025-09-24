@@ -100,6 +100,17 @@ class Player:
         data = tools.getJsonData(path)
         return data
 
+    # 大厅中获取用户信息就用这个
+    def getOnlineData(self):
+        data_values = [
+            self.userName,
+            self.ip,
+            str(self.money)
+        ]
+        output_string = ",".join(data_values)
+
+        return output_string
+
     def setIP(self, ip):
         self.ip = ip
         self.storeData()
