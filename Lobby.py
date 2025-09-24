@@ -84,7 +84,7 @@ class Lobby:
     def draw_hosting_lobby(self):
         """Draws the screen after the host has created a session."""
         host_ip_text = self.font.render(f"Server is running!", True, BLACK)
-        ip_info_text = self.font.render(f"Your IP is: {self.get_local_ip()}", True, BLACK)
+        ip_info_text = self.font.render(f"Your IP is: {self.ip_text}", True, BLACK)
         wait_text = self.font.render("Waiting for players to join...", True, GRAY)
 
         g.draw.rect(self.screen, GRAY, self.startButton)
@@ -106,8 +106,7 @@ class Lobby:
 
     def _start_server(self):
         try:
-            # The blocking call is now safely inside a thread
-            server.serve((self.ip_box, 3333))
+            server.serve((self.ip_text, 3333))
             print("Server thread has started.")
         except Exception as e:
             print(f"Error starting server thread: {e}")
