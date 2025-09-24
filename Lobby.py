@@ -67,7 +67,7 @@ class Lobby:
             elif self.lobby_state == 'hosting':
                 if event.type == g.MOUSEBUTTONDOWN:
                     if self.startButton.collidepoint(event.pos):
-                        self.newGame()
+                        return 'STATE_GAME', self.newGame()
 
         return None, None
 
@@ -149,7 +149,7 @@ class Lobby:
 
     def newGame(self):
         print("New game started.")
-        return 'STATE_GAME', self.players
+        return 'STATE_GAME', self.players, 1
 
     def run(self):
         while self.running:

@@ -2,7 +2,7 @@ import pygame
 import sys
 from Login import Login
 from Lobby import Lobby
-from round import Game
+from round import Room
 
 def main():
     pygame.init()
@@ -13,22 +13,24 @@ def main():
 
     current_state = "STATE_LOGIN"
 
-    logginInstance = None
+    loginInstance = None
+    data = None
 
     while True:
         if current_state == "STATE_LOGIN":
             login  = Login(screen)
-            logginInstance = login
+            loginInstance = login
             next_state, data = login.run()
             current_state = next_state
         elif current_state == "STATE_LOBBY":
-            if logginInstance:
-                if logginInstance.currentPlayer:
-                    lobby = Lobby(screen, logginInstance.currentPlayer)
+            if loginInstance:
+                if loginInstance.currentPlayer:
+                    lobby = Lobby(screen, loginInstance.currentPlayer)
                     next_state, data = lobby.run()
                     current_state = next_state
         elif current_state == 'STATE_GAME':
-            game = Game(screen)
+            print('starting game now')
+            game = Room(data)
         elif current_state == "STATE_QUIT":
             break
 

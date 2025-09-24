@@ -245,6 +245,7 @@ class Room:
         self.banker = choice(players)  # 首次随机选一个作为庄家
         self.order = Round(self.players, self.banker)  # Manages turn order for the round
         self.betPool = 0  # Total accumulated bets in the current round
+        print('room')
 
     def chipIn(self, player, bet):
         """Process a player's bet and add it to the pool
