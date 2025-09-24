@@ -3,7 +3,6 @@ INIT_MONEY = 10000
 USER_DATA_PATH = "./data"
 
 # Round configs
-MAX_BET = 100
 INIT_BET = 1
 
 # Card configs
