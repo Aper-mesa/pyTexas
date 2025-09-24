@@ -112,6 +112,9 @@ class Lobby:
             print(f"Error starting server thread: {e}")
 
     def createSession(self):
+        if self.ip_text == '':
+            print('Input IP address to host')
+            return
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         self.lobby_state = "hosting"
@@ -130,9 +133,12 @@ class Lobby:
         return ip_address
 
     def joinSession(self):
+        if self.ip_text == '':
+            print('Input IP address to join')
+            return
         server.connect((self.ip_text, 3333))
         if server.connected:
-            server.sync(self.localPlayer.player.ip, self.localPlayer.player.getJSONData())
+            server.sync(self.localPlayer.ip, self.localPlayer.getJSONData())
 
     def newGame(self):
         print("New game started.")
