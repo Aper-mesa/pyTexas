@@ -6,22 +6,22 @@ import tools  # Import utility tools module
 class Player:
     """Represents a player in the game with user account information and balance"""
 
-    def __init__(self, userName, password, ip, money=config.INIT_MONEY):
+    def __init__(self, username, password, ip, money=config.INIT_MONEY):
         """Initialize a Player instance
 
         Args:
-            userName: Player's username
+            username: Player's username
             password: Player's password
             money: Initial balance, defaults to value from config
         """
-        self.userName = userName  # Store username
+        self.username = username  # Store username
         self.password = password  # Store password
         self.ip = ip
         self.money = money  # Store player's balance (in-game currency)
 
     def __str__(self):
         """Return string representation of the player"""
-        return self.userName
+        return self.username
 
     def storeData(self):
         """Save player data to a JSON file with hashed credentials
@@ -30,7 +30,7 @@ class Player:
         before saving to the filesystem
         """
         # Hash the username for secure storage/filenaming
-        nameHash = tools.nameToHash(self.userName)
+        nameHash = tools.nameToHash(self.username)
         # Hash the password for secure storage
         pwdHash = tools.pwdToHash(self.password)
 
@@ -42,7 +42,7 @@ class Player:
 
         # Prepare data dictionary with hashed credentials and balance
         data = {
-            "userName": self.userName,
+            "userName": self.username,
             "password": pwdHash,
             "ip": self.ip,
             "money": self.money
@@ -95,7 +95,7 @@ class Player:
             return cls(username, password, ip, money=data["money"])
 
     def getJSONData(self):
-        nameHash = tools.nameToHash(self.userName)
+        nameHash = tools.nameToHash(self.username)
         path = os.path.join(config.USER_DATA_PATH, nameHash + ".json")
         data = tools.getJsonData(path)
         return data
@@ -103,7 +103,7 @@ class Player:
     # 大厅中获取用户信息就用这个
     def getOnlineData(self):
         data_values = [
-            self.userName,
+            self.username,
             self.ip,
             str(self.money)
         ]
