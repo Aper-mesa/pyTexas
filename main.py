@@ -1,5 +1,5 @@
 ### ---------------打包指令---------------
-###  pyinstaller --windowed --name "TexasHoldem" main.py
+###  pyinstaller --windowed --name "pyTexas" main.py
 ### ---------------打包指令---------------
 
 import pygame
