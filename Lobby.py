@@ -17,10 +17,10 @@ server = Server()
 
 
 class Lobby:
-    def __init__(self, screen, player):
+    def __init__(self, screen, localPlayer):
         self.tick = 0
         self.players = []
-        self.localPlayer = player
+        self.localPlayer = localPlayer
         self.screen = screen
         self.clock = g.time.Clock()
         self.font = g.font.Font(None, 32)
@@ -32,6 +32,13 @@ class Lobby:
         self.store_box = g.Rect(250, 450, 100, 50)
         self.ip_text = ''
         self.ip_active = False
+
+        self.minBetBox = g.Rect(300, 500, 100, 30)
+        self.initBetBox = g.Rect(300, 550, 100, 30)
+        self.minBetText = ''
+        self.initBetText = ''
+        self.minBetActive = False
+        self.initBetActive = False
 
         self.startButton = g.Rect(250, 350, 300, 50)
 
@@ -51,6 +58,16 @@ class Lobby:
                         self.ip_text = self.ip_text[:-1]
                     else:
                         self.ip_text += event.unicode
+                if self.minBetActive:
+                    if event.key == g.K_BACKSPACE:
+                        self.minBetText = self.minBetText[:-1]
+                    else:
+                        self.minBetText += event.unicode
+                if self.initBetActive:
+                    if event.key == g.K_BACKSPACE:
+                        self.initBetText = self.initBetText[:-1]
+                    else:
+                        self.initBetText += event.unicode
 
             if self.lobby_state == "main":  # Only handle buttons in the main state
                 if event.type == g.MOUSEBUTTONDOWN:
@@ -68,6 +85,15 @@ class Lobby:
                 if event.type == g.MOUSEBUTTONDOWN:
                     if self.startButton.collidepoint(event.pos):
                         return 'STATE_GAME', self.newGame()
+                    elif self.minBetBox.collidepoint(event.pos):
+                        self.minBetActive = True
+                        self.initBetActive = False
+                    elif self.initBetBox.collidepoint(event.pos):
+                        self.initBetActive = True
+                        self.minBetActive = False
+                    else:
+                        self.minBetActive = False
+                        self.initBetActive = False
 
         return None, None
 
@@ -85,8 +111,7 @@ class Lobby:
         store_text = self.font.render("Store IP", True, BLACK)
         self.screen.blit(store_text, store_text.get_rect(center=self.store_box.center))
 
-        ip_color = COLOR_ACTIVE if self.ip_active else COLOR_INACTIVE
-        g.draw.rect(self.screen, ip_color, self.ip_box, 2)
+        g.draw.rect(self.screen, COLOR_ACTIVE if self.ip_active else COLOR_INACTIVE, self.ip_box, 2)
         ip_surface = self.font.render(self.ip_text, True, BLACK)
         self.screen.blit(ip_surface, (self.ip_box.x + 5, self.ip_box.y + 5))
 
@@ -99,11 +124,28 @@ class Lobby:
         g.draw.rect(self.screen, GRAY, self.startButton)
         start_text = self.font.render('Start', True, BLACK)
         text_rect = start_text.get_rect(center=self.startButton.center)
-        self.screen.blit(start_text, text_rect)
 
+        # 游戏参数设置
+        g.draw.rect(self.screen, COLOR_ACTIVE if self.minBetActive else COLOR_INACTIVE, self.minBetBox)
+        g.draw.rect(self.screen, COLOR_ACTIVE if self.initBetActive else COLOR_INACTIVE, self.initBetBox)
+        minBetSurface = self.font.render(self.minBetText, True, BLACK)
+        initBetSurface = self.font.render(self.initBetText, True, BLACK)
+        self.screen.blit(minBetSurface, (self.minBetBox.x + 5, self.minBetBox.y + 5))
+        self.screen.blit(initBetSurface, (self.initBetBox.x + 5, self.initBetBox.y + 5))
+
+        minBetLabel = self.font.render("Min bet", True, BLACK)
+        self.screen.blit(minBetLabel, (self.minBetBox.x - 120, self.minBetBox.y + 5))
+        initBetLabel = self.font.render("Init bet", True, BLACK)
+        self.screen.blit(initBetLabel, (self.initBetBox.x - 120, self.initBetBox.y + 5))
+
+        self.screen.blit(start_text, text_rect)
         self.screen.blit(host_ip_text, (250, 150))
         self.screen.blit(ip_info_text, (250, 200))
         self.screen.blit(wait_text, (250, 300))
+
+    def draw_joining_lobby(self):
+        joined_text = self.font.render('Waiting for the host to start', True, BLACK)
+        self.screen.blit(joined_text, (250, 150))
 
     def draw(self):
         self.screen.fill(WHITE)
@@ -111,6 +153,8 @@ class Lobby:
             self.draw_main_lobby()
         elif self.lobby_state == "hosting":
             self.draw_hosting_lobby()
+        elif self.lobby_state == 'joining':
+            self.draw_joining_lobby()
         g.display.flip()
 
     def _start_server(self):
@@ -146,6 +190,7 @@ class Lobby:
         if server.connected:
             # 客户端进房间以后把自己的用户信息发送给服务器
             server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
+            self.lobby_state = 'joining'
 
     def newGame(self):
         print("New game started.")
@@ -164,7 +209,7 @@ class Lobby:
                     self.tick += 1
                 else:
                     data = str(server.connections)
-                    ip_addresses = re.findall(r"raddr=\('([\d\.]+)',", data)
+                    ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
                     self.createUsers(ip_addresses)
                     self.tick = 0
 
