@@ -3,7 +3,6 @@ import os
 import pygame as g
 
 import player
-import tools
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
 
@@ -20,8 +19,8 @@ class Login:
         self.screen = screen
         self.clock = g.time.Clock()
 
-        font_path = tools.resource_path('msyh.ttc')
-        self.font = g.font.Font(font_path, 24)
+        font_names = "Microsoft YaHei, Segoe UI, Arial"
+        self.font = g.font.SysFont(font_names, 24)
 
         # --- UI Elements ---
         self.username_box = g.Rect(300, 150, 200, 32)
