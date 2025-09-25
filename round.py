@@ -240,6 +240,7 @@ class Room:
     Handles game state, player interactions, betting pools, and round progression.
     """
     def __init__(self, screen, data):
+        self.server = data[3]
         self.screen = screen
         self.players = data[0]  # 房间中的所有人，从房主创房那边直接传递过来
         self.activePlayers = self.players  # 在打牌的人，弃牌了就不在这了，初始和players一样
