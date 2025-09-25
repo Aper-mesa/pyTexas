@@ -1,3 +1,7 @@
+### ---------------打包指令---------------
+###  pyinstaller --onefile --windowed --add-data "msyh.ttc:." --name "pyTexas" main.py
+### ---------------打包指令---------------
+
 import pygame
 import sys
 from Login import Login

@@ -3,6 +3,7 @@ import os
 import pygame as g
 
 import player
+import tools
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
 
@@ -19,8 +20,7 @@ class Login:
         self.screen = screen
         self.clock = g.time.Clock()
 
-        script_dir = os.path.dirname(__file__)
-        font_path = os.path.join(script_dir, 'msyh.ttc')
+        font_path = tools.resource_path('msyh.ttc')
         self.font = g.font.Font(font_path, 24)
 
         # --- UI Elements ---
