@@ -35,8 +35,8 @@ class Lobby:
 
         self.minBetBox = g.Rect(300, 500, 100, 30)
         self.initBetBox = g.Rect(300, 550, 100, 30)
-        self.minBetText = ''
-        self.initBetText = ''
+        self.minBetText = '1'
+        self.initBetText = '50'
         self.minBetActive = False
         self.initBetActive = False
 
@@ -84,7 +84,7 @@ class Lobby:
             elif self.lobby_state == 'hosting':
                 if event.type == g.MOUSEBUTTONDOWN:
                     if self.startButton.collidepoint(event.pos):
-                        return 'STATE_GAME', self.newGame()
+                        return self.newGame()
                     elif self.minBetBox.collidepoint(event.pos):
                         self.minBetActive = True
                         self.initBetActive = False
@@ -194,12 +194,13 @@ class Lobby:
 
     def newGame(self):
         print("New game started.")
-        return 'STATE_GAME', self.players, 1
+        return 'STATE_GAME', [self.players, self.minBetText, self.initBetText]
 
     def run(self):
         while self.running:
             next_state, data = self.handle_events()
             if next_state:
+                g.key.stop_text_input()
                 return next_state, data
 
             # 服务器逻辑

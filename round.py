@@ -4,6 +4,8 @@ from random import shuffle  # For shuffling the deck of cards
 import card  # Import the Card class for creating card instances
 import config  # Import configuration with card type/rank definitions
 import player  # Import the two player class for creating player instances
+import pygame as g
+from pygame_networking import Server
 
 class CardPool:
     """Represents a pool/deck of playing cards used in the game.
@@ -237,15 +239,17 @@ class Room:
     """Manages a game room where players participate in rounds, place bets, and compete.
     Handles game state, player interactions, betting pools, and round progression.
     """
-    def __init__(self, players, initBet=config.INIT_BET):
-        self.players = players  # 房间中的所有人，从房主创房那边直接传递过来
+    def __init__(self, screen, data):
+        self.screen = screen
+        self.players = data[0]  # 房间中的所有人，从房主创房那边直接传递过来
         self.activePlayers = self.players  # 在打牌的人，弃牌了就不在这了，初始和players一样
-        self.numPlayers = len(players)  # Total number of players in the room
-        self.minBet = initBet  # Minimum initial bet required
-        self.banker = choice(players)  # 首次随机选一个作为庄家
+        self.numPlayers = len(self.players)  # Total number of players in the room
+        self.minBet = data[1]  # Minimum initial bet required
+        self.initBet = data[2]
+        self.banker = choice(self.players)  # 首次随机选一个作为庄家
         self.order = Round(self.players, self.banker)  # Manages turn order for the round
         self.betPool = 0  # Total accumulated bets in the current round
-        print('room')
+        print(self.initBet)
 
     def chipIn(self, player, bet):
         """Process a player's bet and add it to the pool
@@ -317,3 +321,6 @@ class Room:
         self.order = Round.createNextRound(self.order)
         self.betPool = 0  # Clear the betting pool
         self.banker = self.order.positions()["BTN"]  # Update host to button position (likely dealer)
+
+    def run(self):
+        return None, None

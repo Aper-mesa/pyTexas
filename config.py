@@ -2,9 +2,6 @@
 INIT_MONEY = 10000
 USER_DATA_PATH = "./data"
 
-# Round configs
-INIT_BET = 1
-
 # Card configs
 CARD_NUMBER_RANK_MAP = {  # Ranks of the card number
     "2": 2, "3": 3, "4": 4, "5": 5, "6": 6,

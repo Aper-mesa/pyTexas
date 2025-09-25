@@ -29,9 +29,11 @@ def main():
                     next_state, data = lobby.run()
                     current_state = next_state
         elif current_state == 'STATE_GAME':
-            print('starting game now')
-            game = Room(data)
+            game = Room(screen, data)
+            next_state, data = game.run()
+            current_state = next_state
         elif current_state == "STATE_QUIT":
+            print('exit game because of quit state')
             break
 
     print("Exiting application.")
