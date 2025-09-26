@@ -1,15 +1,28 @@
 ### ---------------打包指令---------------
-###  pyinstaller --windowed --name "pyTexas" main.py
+###  pyinstaller --windowed --name "pyTexas" --add-data "languages;languages" main.py
 ### ---------------打包指令---------------
+import os
 
+import i18n
 import pygame
 import sys
+
+import tools
 from Login import Login
 from Lobby import Lobby
 from round import Room
 
 def main():
+    running_dir = tools.resource_path('.')
+    os.chdir(running_dir)
+    print(f"INFO: Current working directory changed to: {os.getcwd()}")
+
     pygame.init()
+
+    i18n.set('load_path', ['languages'])
+    i18n.set('filename_format', 'lang.{locale}.{format}')
+    i18n.set('locale', 'zh')
+    i18n.set('fallback', 'en')
 
     screen_width = 800
     screen_height = 600
