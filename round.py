@@ -1,11 +1,16 @@
 from random import choice  # For choosing the host
 from random import shuffle  # For shuffling the deck of cards
+import pygame_gui as gui
+import pygame
 
 import card  # Import the Card class for creating card instances
 import config  # Import configuration with card type/rank definitions
 import player  # Import the two player class for creating player instances
 import pygame as g
 from pygame_networking import Server
+
+from player import PlayerInGame
+
 
 class CardPool:
     """Represents a pool/deck of playing cards used in the game.
@@ -250,6 +255,9 @@ class Room:
         self.banker = choice(self.players)  # 首次随机选一个作为庄家
         self.order = Round(self.players, self.banker)  # Manages turn order for the round
         self.betPool = 0  # Total accumulated bets in the current round
+        self.lastChip = 0
+        self.cards = CardPool()
+        self.publicCardPool = [None] * 5
         print(self.initBet)
 
     def chipIn(self, player, bet):
@@ -264,6 +272,9 @@ class Room:
         """
         playerInGame = self.activePlayers[player]  # Get player's in-game state
 
+        if bet < self.lastChip:
+            return False
+
         # Check if player has enough remaining bet capacity
         if playerInGame.currentBet < bet:
             return False
@@ -271,6 +282,22 @@ class Room:
         # Deduct bet from player's available amount and add to pool
         playerInGame.currentBet -= bet
         self.betPool += bet
+        self.lastChip = bet
+        return True
+
+    def deliverCards(self):
+        self.order.setStreet("flop")
+        for i in range(3):
+            for player in self.order:
+                card = self.cards.getNextCard()
+                player.handCards.append(card)
+
+    def addCardToPublicPool(self):
+        if not None in self.publicCardPool:
+            return False
+        place = self.publicCardPool.index(None)
+        card = self.cards.getNextCard()
+        self.publicCardPool[place] = card
         return True
 
     def endOfRound(self):
@@ -322,6 +349,276 @@ class Room:
         self.order = Round.createNextRound(self.order)
         self.betPool = 0  # Clear the betting pool
         self.banker = self.order.positions()["BTN"]  # Update host to button position (likely dealer)
+        self.cards = CardPool()
 
     def run(self):
         return None, None
+
+
+class PlayScreen:
+
+    def __init__(self, screen, manager, room=None, player=None):
+        self.screen = screen
+        self.manager = manager
+        self.clock = pygame.time.Clock()
+        self.screen_width, self.screen_height = screen.get_size()
+        self.player = player
+    # -------Test data
+        self.tester = True
+
+        if not self.player:
+            cardPool = CardPool()
+            self.player = PlayerInGame("88", "0.0.0.0", 123444444)
+            for i in range(2):
+                self.player.handCards.append(cardPool.getNextCard())
+
+    # -------End of test data
+        self.renderPlayers()
+        self.renderBetDisplay()
+        self.renderCardSlots()
+        self.renderPublicCards()
+        self.renderBetPoolDisplay()
+
+        running = True
+        while running:
+            time_delta = self.clock.tick(60) / 1000.0
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                self.manager.process_events(event)
+
+            self.manager.update(time_delta)
+
+            self.screen.fill((34, 139, 34))
+
+            self.manager.draw_ui(self.screen)
+
+            pygame.display.update()
+
+        pygame.quit()
+
+    def getPublicCards(self):
+        if self.tester:
+            cardPool = CardPool()
+            return [cardPool.getNextCard() for i in range(4) ]
+
+        return []
+
+    def getBetPool(self):
+        return 9527
+
+    def getPlayerNames(self):
+        players = []
+        playerData = []
+        if self.tester:
+            for i in range(10):
+                players.append(PlayerInGame("9527", "0.0.0.0", "10000000"))
+
+        for player in players:
+            playerData.append({
+                "name": player.username,
+                "chips": player.money
+            })
+
+        return playerData
+
+    def renderBetDisplay(self):
+        bet_box_width = self.screen_width * 0.2
+        bet_box_height = 60
+        bet_box_x = self.screen_width - bet_box_width - 20
+        bet_box_y = 20
+
+        bet_container = gui.elements.UIPanel(
+            relative_rect=pygame.Rect(
+                (bet_box_x, bet_box_y),
+                (bet_box_width, bet_box_height)
+            ),
+            manager=self.manager,
+            starting_height=1,
+            object_id="#bet_container"
+        )
+
+        current_bet = self.player.money if self.player else 0
+        gui.elements.UILabel(
+            relative_rect=pygame.Rect((10, 10), (bet_box_width - 20, 40)),
+            text=f"{current_bet} $",
+            manager=self.manager,
+            container=bet_container
+        )
+
+    def renderBetPoolDisplay(self):
+        bet_box_width = self.screen_width * 0.2
+        bet_box_height = 60
+        bet_box_x = self.screen_width - bet_box_width - 20
+        bet_box_y = 80
+
+        bet_container = gui.elements.UIPanel(
+            relative_rect=pygame.Rect(
+                (bet_box_x, bet_box_y),
+                (bet_box_width, bet_box_height)
+            ),
+            manager=self.manager,
+            starting_height=1,
+            object_id="#bet_pool_container"
+        )
+
+        current_bet = self.getBetPool()
+        gui.elements.UILabel(
+            relative_rect=pygame.Rect((10, 10), (bet_box_width - 20, 40)),
+            text=f"{current_bet} $",
+            manager=self.manager,
+            container=bet_container
+        )
+
+    def renderCardSlots(self):
+        slot_width = 100
+        slot_height = 150
+        spacing = 20
+        total_width = (slot_width * 3) + (spacing * 2)
+        start_x = (self.screen_width - total_width) // 2
+        start_y = self.screen_height - slot_height - 40
+
+        for i in range(3):
+            slot_x = start_x + i * (slot_width + spacing)
+
+            card_slot = gui.elements.UIPanel(
+                relative_rect=pygame.Rect(
+                    (slot_x, start_y),
+                    (slot_width, slot_height)
+                ),
+                manager=self.manager,
+                starting_height=1,
+                object_id="#card_slot"
+            )
+
+            if (len(self.player.handCards) - 1) >= i:
+
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((5, 5), (slot_width - 10, slot_height - 10)),
+                    text=str(self.player.handCards[i]),
+                    manager=self.manager,
+                    container=card_slot
+                )
+            else:
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((5, 5), (slot_width - 10, slot_height - 10)),
+                    text="*",
+                    manager=self.manager,
+                    container=card_slot
+                )
+
+    def renderPublicCards(self):
+        card_width = 100
+        card_height = 120
+        spacing = 15
+        row_spacing = 20
+        first_row_width = (card_width * 3) + (spacing * 2)
+        first_row_x = (self.screen_width - first_row_width) // 2 + 50
+        first_row_y = (self.screen_height // 2) - (card_height // 2) -120
+
+        second_row_width = (card_width * 2) + spacing
+        second_row_x = (self.screen_width - second_row_width) // 2  + 50
+        second_row_y = first_row_y + card_height + row_spacing
+
+        publicCards = self.getPublicCards()
+
+        for i in range(3):
+            card_x = first_row_x + i * (card_width + spacing)
+
+            card_container = gui.elements.UIPanel(
+                relative_rect=pygame.Rect(
+                    (card_x, first_row_y),
+                    (card_width, card_height)
+                ),
+                manager=self.manager,
+                starting_height=1,
+                object_id="#public_card_container"
+            )
+
+            if i < len(publicCards):
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
+                    text=str(publicCards[i]),
+                    manager=self.manager,
+                    container=card_container
+                )
+            else:
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
+                    text="*",
+                    manager=self.manager,
+                    container=card_container
+                )
+
+        for i in range(2):
+            card_x = second_row_x + i * (card_width + spacing)
+            card_index = i + 3
+
+            card_container = gui.elements.UIPanel(
+                relative_rect=pygame.Rect(
+                    (card_x, second_row_y),
+                    (card_width, card_height)
+                ),
+                manager=self.manager,
+                starting_height=1,
+                object_id="#public_card_container"
+            )
+
+            if card_index < len(publicCards):
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
+                    text=str(publicCards[card_index]),
+                    manager=self.manager,
+                    container=card_container
+                )
+            else:
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
+                    text="*",
+                    manager=self.manager,
+                    container=card_container
+                )
+
+    def renderPlayers(self):
+        container_width = self.screen_width * 0.3
+        container_x = 20
+        container_y = 20
+        container_height = self.screen_height * 0.6
+
+        scroll_container = gui.elements.UIScrollingContainer(
+            relative_rect=pygame.Rect(
+                (container_x, container_y),
+                (container_width, container_height)
+            ),
+            manager=self.manager,
+            object_id="#players_scroll_container"
+        )
+
+        box_width = container_width - 40
+        box_height = 40
+        spacing = 15
+        start_y = 10
+
+        players = self.getPlayerNames()
+
+        for i, player in enumerate(players):
+            y_pos = start_y + i * (box_height + spacing)
+
+            panel = gui.elements.UIPanel(
+                relative_rect=pygame.Rect((20, y_pos), (box_width, box_height)),
+                manager=self.manager,
+                starting_height=1,
+                object_id="#player_panel",
+                container=scroll_container
+            )
+
+
+            gui.elements.UILabel(
+                relative_rect=pygame.Rect((10, 10), (box_width - 20, 25)),
+                text=f"{player['name']}    {player['chips']} $",
+                manager=self.manager,
+                container=panel
+            )
+        total_height = start_y + len(players) * (box_height + spacing) + 10
+        scroll_container.set_scrollable_area_dimensions((box_width + 40, total_height))
