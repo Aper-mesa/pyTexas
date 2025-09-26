@@ -390,7 +390,7 @@ class PlayScreen:
 
             self.manager.update(time_delta)
 
-            self.screen.fill((34, 139, 34))
+            self.screen.fill((255, 255, 255))
 
             self.manager.draw_ui(self.screen)
 
@@ -527,6 +527,7 @@ class PlayScreen:
             card_x = first_row_x + i * (card_width + spacing)
 
             card_container = gui.elements.UIPanel(
+
                 relative_rect=pygame.Rect(
                     (card_x, first_row_y),
                     (card_width, card_height)
