@@ -1,0 +1,9 @@
+{
+  "zh": {
+    "username": "用户名",
+    "password": "密码",
+    "login_title": "德州扑克 - 登录",
+    "confirm_button": "确认",
+    "info_empty_username_or_password": "用户名或密码不能为空"
+  }
+}

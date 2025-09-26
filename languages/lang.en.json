@@ -1,0 +1,9 @@
+{
+  "en": {
+    "username": "username",
+    "password": "password",
+    "login_title": "pyTexas - login",
+    "confirm_button": "Confirm",
+    "info_empty_username_or_password": "Username or password cannot be empty"
+  }
+}

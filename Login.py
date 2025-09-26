@@ -3,30 +3,32 @@ import pygame as g
 import pygame_gui as gui
 import player
 
-os.environ["SDL_IME_SHOW_UI"] = "1"   # 开启IME候选框显示（需要SDL/系统支持）
+os.environ["SDL_IME_SHOW_UI"] = "1"  # 开启IME候选框显示（需要SDL/系统支持）
+
 
 class Login:
     def __init__(self, screen):
         self.screen = screen
-        g.display.set_caption('pyTexas Login')
+        g.display.set_caption("lang.login_title")
         self.clock = g.time.Clock()
         self.running = True
         self.currentPlayer = None
 
-        self.manager = gui.UIManager((self.screen.get_size()), starting_language='zh', theme_path='theme.json')  # 如需中文字体，可加载主题或自定义字体
+        self.manager = gui.UIManager((self.screen.get_size()), starting_language='zh', theme_path='theme.json',
+                                     translation_directory_paths=['languages'])
 
         w, h = self.screen.get_size()
         center_x = w // 2
 
         self.title_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 120, 60, 240, 40),
-            text='pyTexas Login',
+            text='lang.login_title',
             manager=self.manager
         )
 
         self.username_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 180, 140, 120, 32),
-            text='Username',
+            text="lang.username",
             manager=self.manager
         )
         self.username_entry = gui.elements.UITextEntryLine(
@@ -36,7 +38,7 @@ class Login:
 
         self.password_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 180, 200, 120, 32),
-            text='Password',
+            text='lang.password',
             manager=self.manager
         )
         self.password_entry = gui.elements.UITextEntryLine(
@@ -47,7 +49,13 @@ class Login:
 
         self.confirm_button = gui.elements.UIButton(
             relative_rect=g.Rect(center_x - 60, 270, 120, 44),
-            text='Confirm',
+            text='lang.confirm_button',
+            manager=self.manager
+        )
+
+        self.language_button = gui.elements.UIButton(
+            relative_rect=g.Rect(0, 0, 70, 35),
+            text="英语",
             manager=self.manager
         )
 
@@ -81,9 +89,17 @@ class Login:
 
             self.manager.process_events(event)
 
-            if event.type == gui.UI_BUTTON_PRESSED and event.ui_element == self.confirm_button:
-                if self.register():
-                    return 'STATE_LOBBY', self.username_entry.get_text()
+            if event.type == gui.UI_BUTTON_PRESSED:
+                if event.ui_element == self.confirm_button:
+                    if self.register():
+                        return 'STATE_LOBBY', self.username_entry.get_text()
+                elif event.ui_element == self.language_button:
+                    if self.manager.get_locale() == 'zh':
+                        self.manager.set_locale('en')
+                        self.language_button.set_text('Chinese')
+                    else:
+                        self.manager.set_locale('zh')
+                        self.language_button.set_text('英语')
 
         return None, None
 
@@ -99,7 +115,8 @@ class Login:
         password_text = self.password_entry.get_text()
 
         if not username_text or not password_text:
-            self.info_label.set_text("Username/Password 不能为空")
+            self.info_label.set_text("lang.info_empty_username_or_password")
+            self.manager.set_locale("en")
             return False
 
         ip = '127.0.0.1'
@@ -108,10 +125,8 @@ class Login:
             if p:
                 player.Player.storeData(p)
                 self.currentPlayer = p
-                self.info_label.set_text("Login success!")
                 return True
             else:
-                self.info_label.set_text("Password incorrect. Retry or create new account.")
                 return False
         except Exception as e:
             self.info_label.set_text(f"Error: {e}")
