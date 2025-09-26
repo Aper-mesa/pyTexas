@@ -31,12 +31,12 @@ class Lobby:
 
         self.ui_btn_create = gui.elements.UIButton(
             relative_rect=g.Rect(250, 150, 300, 50),
-            text="lang.create_session",
+            text="create_session",
             manager=self.manager
         )
         self.ui_btn_join = gui.elements.UIButton(
             relative_rect=g.Rect(250, 250, 300, 50),
-            text="lang.join_session",
+            text="join_session",
             manager=self.manager
         )
         self.ui_ip_entry = gui.elements.UITextEntryLine(
@@ -45,35 +45,35 @@ class Lobby:
         )
         self.ui_btn_store_ip = gui.elements.UIButton(
             relative_rect=g.Rect(250, 450, 100, 50),
-            text="lang.save_ip",
+            text="save_ip",
             manager=self.manager
         )
 
         # ---- Hosting 界面控件 ----
         self.ui_label_host_running = gui.elements.UILabel(
             relative_rect=g.Rect(150, 150, 400, 32),
-            text="lang.server_running",
+            text="server_running",
             manager=self.manager
         )
         self.ui_label_ip_info = gui.elements.UILabel(
             relative_rect=g.Rect(150, 200, 500, 32),
-            text="lang.your_ip",
+            text="your_ip",
             manager=self.manager
         )
         self.ui_label_wait = gui.elements.UILabel(
             relative_rect=g.Rect(150, 250, 500, 32),
-            text="lang.wait_join",
+            text="wait_join",
             manager=self.manager
         )
         self.ui_btn_start = gui.elements.UIButton(
             relative_rect=g.Rect(250, 300, 300, 50),
-            text="lang.start",
+            text="start",
             manager=self.manager
         )
 
         self.ui_label_min_bet = gui.elements.UILabel(
             relative_rect=g.Rect(180, 400, 100, 30),
-            text="lang.min_bet",
+            text="min_bet",
             manager=self.manager
         )
         self.ui_entry_min_bet = gui.elements.UITextEntryLine(
@@ -84,7 +84,7 @@ class Lobby:
 
         self.ui_label_init_bet = gui.elements.UILabel(
             relative_rect=g.Rect(180, 450, 100, 30),
-            text="lang.init_bet",
+            text="init_bet",
             manager=self.manager
         )
         self.ui_entry_init_bet = gui.elements.UITextEntryLine(
@@ -95,7 +95,7 @@ class Lobby:
 
         self.ui_label_joining = gui.elements.UILabel(
             relative_rect=g.Rect(250, 150, 400, 32),
-            text="lang.wait_host",
+            text="wait_host",
             manager=self.manager
         )
 

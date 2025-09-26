@@ -2,6 +2,7 @@ import os
 import pygame as g
 import pygame_gui as gui
 import player
+import tools
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
 
@@ -9,26 +10,26 @@ os.environ["SDL_IME_SHOW_UI"] = "1"
 class Login:
     def __init__(self, screen):
         self.screen = screen
-        g.display.set_caption("lang.login_title")
+        g.display.set_caption("login_title")
         self.clock = g.time.Clock()
         self.running = True
         self.currentPlayer = None
 
-        self.manager = gui.UIManager((self.screen.get_size()), starting_language='zh', theme_path='theme.json',
-                                     translation_directory_paths=['languages'])
+        self.manager = gui.UIManager((self.screen.get_size()), starting_language='zh', theme_path=tools.resource_path('theme.json'),
+                                     translation_directory_paths=[tools.resource_path('languages')])
 
         w, h = self.screen.get_size()
         center_x = w // 2
 
         self.title_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 120, 60, 240, 40),
-            text='lang.login_title',
+            text='login_title',
             manager=self.manager
         )
 
         self.username_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 180, 140, 120, 32),
-            text="lang.username",
+            text="username",
             manager=self.manager
         )
         self.username_entry = gui.elements.UITextEntryLine(
@@ -38,7 +39,7 @@ class Login:
 
         self.password_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 180, 200, 120, 32),
-            text='lang.password',
+            text='password',
             manager=self.manager
         )
         self.password_entry = gui.elements.UITextEntryLine(
@@ -49,7 +50,7 @@ class Login:
 
         self.confirm_button = gui.elements.UIButton(
             relative_rect=g.Rect(center_x - 60, 270, 120, 44),
-            text='lang.confirm_button',
+            text='confirm_button',
             manager=self.manager
         )
 
@@ -115,7 +116,7 @@ class Login:
         password_text = self.password_entry.get_text()
 
         if not username_text or not password_text:
-            self.info_label.set_text("lang.info_empty_username_or_password")
+            self.info_label.set_text("info_empty_username_or_password")
             return False
 
         ip = '127.0.0.1'
