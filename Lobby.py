@@ -71,27 +71,27 @@ class Lobby:
             manager=self.manager
         )
 
-        self.ui_label_minbet = gui.elements.UILabel(
+        self.ui_label_min_bet = gui.elements.UILabel(
             relative_rect=g.Rect(180, 400, 100, 30),
             text="lang.min_bet",
             manager=self.manager
         )
-        self.ui_entry_minbet = gui.elements.UITextEntryLine(
+        self.ui_entry_min_bet = gui.elements.UITextEntryLine(
             relative_rect=g.Rect(300, 400, 100, 30),
             manager=self.manager
         )
-        self.ui_entry_minbet.set_text(self.minBetText)
+        self.ui_entry_min_bet.set_text(self.minBetText)
 
-        self.ui_label_initbet = gui.elements.UILabel(
+        self.ui_label_init_bet = gui.elements.UILabel(
             relative_rect=g.Rect(180, 450, 100, 30),
             text="lang.init_bet",
             manager=self.manager
         )
-        self.ui_entry_initbet = gui.elements.UITextEntryLine(
+        self.ui_entry_init_bet = gui.elements.UITextEntryLine(
             relative_rect=g.Rect(300, 450, 100, 30),
             manager=self.manager
         )
-        self.ui_entry_initbet.set_text(self.initBetText)
+        self.ui_entry_init_bet.set_text(self.initBetText)
 
         self.ui_label_joining = gui.elements.UILabel(
             relative_rect=g.Rect(250, 150, 400, 32),
@@ -115,22 +115,22 @@ class Lobby:
         ]
         hosting_elems = [
             self.ui_label_host_running, self.ui_label_ip_info, self.ui_label_wait,
-            self.ui_btn_start, self.ui_label_minbet, self.ui_entry_minbet,
-            self.ui_label_initbet, self.ui_entry_initbet
+            self.ui_btn_start, self.ui_label_min_bet, self.ui_entry_min_bet,
+            self.ui_label_init_bet, self.ui_entry_init_bet
         ]
         joining_elems = [self.ui_label_joining]
 
         if state == "main":
-            show(main_elems);
-            hide(hosting_elems);
+            show(main_elems)
+            hide(hosting_elems)
             hide(joining_elems)
         elif state == "hosting":
-            hide(main_elems);
-            show(hosting_elems);
+            hide(main_elems)
+            show(hosting_elems)
             hide(joining_elems)
         elif state == "joining":
-            hide(main_elems);
-            hide(hosting_elems);
+            hide(main_elems)
+            hide(hosting_elems)
             show(joining_elems)
 
         self.ui_label_ip_info.set_text(self.ip_text)
@@ -144,10 +144,10 @@ class Lobby:
             if event.type == gui.UI_TEXT_ENTRY_CHANGED:
                 if event.ui_element == self.ui_ip_entry:
                     self.ip_text = self.ui_ip_entry.get_text()
-                elif event.ui_element == self.ui_entry_minbet:
-                    self.minBetText = self.ui_entry_minbet.get_text()
-                elif event.ui_element == self.ui_entry_initbet:
-                    self.initBetText = self.ui_entry_initbet.get_text()
+                elif event.ui_element == self.ui_entry_min_bet:
+                    self.minBetText = self.ui_entry_min_bet.get_text()
+                elif event.ui_element == self.ui_entry_init_bet:
+                    self.initBetText = self.ui_entry_init_bet.get_text()
 
             if event.type == gui.UI_BUTTON_PRESSED:
                 if event.ui_element == self.ui_btn_join and self.lobby_state == "main":
