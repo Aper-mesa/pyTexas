@@ -4,6 +4,16 @@
     "password": "密码",
     "login_title": "德州扑克 - 登录",
     "confirm_button": "确认",
-    "info_empty_username_or_password": "用户名或密码不能为空"
+    "info_empty_username_or_password": "用户名或密码不能为空",
+    "create_session": "创建房间",
+    "join_session": "加入房间",
+    "save_ip": "保存IP",
+    "server_running": "服务器已启动，IP地址：",
+    "your_ip": "你的IP是 ",
+    "wait_join": "等待其他玩家加入",
+    "start": "开始",
+    "min_bet": "最小赌注",
+    "init_bet": "初始资金",
+    "wait_host": "等待房主开始"
   }
 }

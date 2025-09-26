@@ -6,45 +6,134 @@ from pygame_networking import Server
 
 import player
 
-# --- Constants ---
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GRAY = (200, 200, 200)
-COLOR_INACTIVE = g.Color('lightskyblue3')
-COLOR_ACTIVE = g.Color('dodgerblue2')
-
-server = Server()
+import pygame_gui as gui
 
 
 class Lobby:
-    def __init__(self, screen, localPlayer):
+    def __init__(self, screen, manager, localPlayer):
+        self.server = Server()
         self.tick = 0
         self.players = []
         self.localPlayer = localPlayer
         self.screen = screen
         self.clock = g.time.Clock()
-        self.font = g.font.Font(None, 32)
 
-        # --- UI Elements ---
-        self.create_session_button = g.Rect(250, 150, 300, 50)
-        self.join_session_button = g.Rect(250, 250, 300, 50)
-        self.ip_box = g.Rect(250, 350, 300, 50)
-        self.store_box = g.Rect(250, 450, 100, 50)
+        self.manager = manager
+
         self.ip_text = ''
         self.ip_active = False
-
-        self.minBetBox = g.Rect(300, 500, 100, 30)
-        self.initBetBox = g.Rect(300, 550, 100, 30)
         self.minBetText = '1'
         self.initBetText = '50'
         self.minBetActive = False
         self.initBetActive = False
-
-        self.startButton = g.Rect(250, 350, 300, 50)
-
-        # --- State Variables ---
         self.running = True
-        self.lobby_state = "main"  # "main" or "hosting"
+        self.lobby_state = "main"
+
+        self.ui_btn_create = gui.elements.UIButton(
+            relative_rect=g.Rect(250, 150, 300, 50),
+            text="lang.create_session",
+            manager=self.manager
+        )
+        self.ui_btn_join = gui.elements.UIButton(
+            relative_rect=g.Rect(250, 250, 300, 50),
+            text="lang.join_session",
+            manager=self.manager
+        )
+        self.ui_ip_entry = gui.elements.UITextEntryLine(
+            relative_rect=g.Rect(250, 350, 300, 50),
+            manager=self.manager
+        )
+        self.ui_btn_store_ip = gui.elements.UIButton(
+            relative_rect=g.Rect(250, 450, 100, 50),
+            text="lang.save_ip",
+            manager=self.manager
+        )
+
+        # ---- Hosting 界面控件 ----
+        self.ui_label_host_running = gui.elements.UILabel(
+            relative_rect=g.Rect(150, 150, 400, 32),
+            text="lang.server_running",
+            manager=self.manager
+        )
+        self.ui_label_ip_info = gui.elements.UILabel(
+            relative_rect=g.Rect(150, 200, 500, 32),
+            text="lang.your_ip",
+            manager=self.manager
+        )
+        self.ui_label_wait = gui.elements.UILabel(
+            relative_rect=g.Rect(150, 250, 500, 32),
+            text="lang.wait_join",
+            manager=self.manager
+        )
+        self.ui_btn_start = gui.elements.UIButton(
+            relative_rect=g.Rect(250, 300, 300, 50),
+            text="lang.start",
+            manager=self.manager
+        )
+
+        self.ui_label_minbet = gui.elements.UILabel(
+            relative_rect=g.Rect(180, 400, 100, 30),
+            text="lang.min_bet",
+            manager=self.manager
+        )
+        self.ui_entry_minbet = gui.elements.UITextEntryLine(
+            relative_rect=g.Rect(300, 400, 100, 30),
+            manager=self.manager
+        )
+        self.ui_entry_minbet.set_text(self.minBetText)
+
+        self.ui_label_initbet = gui.elements.UILabel(
+            relative_rect=g.Rect(180, 450, 100, 30),
+            text="lang.init_bet",
+            manager=self.manager
+        )
+        self.ui_entry_initbet = gui.elements.UITextEntryLine(
+            relative_rect=g.Rect(300, 450, 100, 30),
+            manager=self.manager
+        )
+        self.ui_entry_initbet.set_text(self.initBetText)
+
+        self.ui_label_joining = gui.elements.UILabel(
+            relative_rect=g.Rect(250, 150, 400, 32),
+            text="lang.wait_host",
+            manager=self.manager
+        )
+
+        self._set_state_visibility("main")
+
+    def _set_state_visibility(self, state: str):
+        self.lobby_state = state
+
+        def show(elems):
+            for e in elems: e.show()
+
+        def hide(elems):
+            for e in elems: e.hide()
+
+        main_elems = [
+            self.ui_btn_create, self.ui_btn_join, self.ui_ip_entry, self.ui_btn_store_ip
+        ]
+        hosting_elems = [
+            self.ui_label_host_running, self.ui_label_ip_info, self.ui_label_wait,
+            self.ui_btn_start, self.ui_label_minbet, self.ui_entry_minbet,
+            self.ui_label_initbet, self.ui_entry_initbet
+        ]
+        joining_elems = [self.ui_label_joining]
+
+        if state == "main":
+            show(main_elems);
+            hide(hosting_elems);
+            hide(joining_elems)
+        elif state == "hosting":
+            hide(main_elems);
+            show(hosting_elems);
+            hide(joining_elems)
+        elif state == "joining":
+            hide(main_elems);
+            hide(hosting_elems);
+            show(joining_elems)
+
+        self.ui_label_ip_info.set_text(self.ip_text)
 
     def handle_events(self):
         for event in g.event.get():
@@ -52,109 +141,36 @@ class Lobby:
                 self.running = False
                 return "STATE_QUIT", None
 
-            if event.type == g.KEYDOWN:
-                if self.ip_active:
-                    if event.key == g.K_BACKSPACE:
-                        self.ip_text = self.ip_text[:-1]
-                    else:
-                        self.ip_text += event.unicode
-                if self.minBetActive:
-                    if event.key == g.K_BACKSPACE:
-                        self.minBetText = self.minBetText[:-1]
-                    else:
-                        self.minBetText += event.unicode
-                if self.initBetActive:
-                    if event.key == g.K_BACKSPACE:
-                        self.initBetText = self.initBetText[:-1]
-                    else:
-                        self.initBetText += event.unicode
+            if event.type == gui.UI_TEXT_ENTRY_CHANGED:
+                if event.ui_element == self.ui_ip_entry:
+                    self.ip_text = self.ui_ip_entry.get_text()
+                elif event.ui_element == self.ui_entry_minbet:
+                    self.minBetText = self.ui_entry_minbet.get_text()
+                elif event.ui_element == self.ui_entry_initbet:
+                    self.initBetText = self.ui_entry_initbet.get_text()
 
-            if self.lobby_state == "main":  # Only handle buttons in the main state
-                if event.type == g.MOUSEBUTTONDOWN:
-                    if self.join_session_button.collidepoint(event.pos):
-                        self.joinSession()
-                    elif self.create_session_button.collidepoint(event.pos):
-                        self.createSession()
-                    elif self.ip_box.collidepoint(event.pos):
-                        self.ip_active = True
-                    elif self.store_box.collidepoint(event.pos):
-                        self.storeIP()
-                    else:
-                        self.ip_active = False
-            elif self.lobby_state == 'hosting':
-                if event.type == g.MOUSEBUTTONDOWN:
-                    if self.startButton.collidepoint(event.pos):
-                        return self.newGame()
-                    elif self.minBetBox.collidepoint(event.pos):
-                        self.minBetActive = True
-                        self.initBetActive = False
-                    elif self.initBetBox.collidepoint(event.pos):
-                        self.initBetActive = True
-                        self.minBetActive = False
-                    else:
-                        self.minBetActive = False
-                        self.initBetActive = False
+            if event.type == gui.UI_BUTTON_PRESSED:
+                if event.ui_element == self.ui_btn_join and self.lobby_state == "main":
+                    self.joinSession()
+                elif event.ui_element == self.ui_btn_create and self.lobby_state == "main":
+                    self.createSession()
+                elif event.ui_element == self.ui_btn_store_ip and self.lobby_state == "main":
+                    self.storeIP()
+                elif event.ui_element == self.ui_btn_start and self.lobby_state == "hosting":
+                    return self.newGame()
+
+            self.manager.process_events(event)
 
         return None, None
 
-    def draw_main_lobby(self):
-        """Draws the initial lobby screen with buttons."""
-        g.draw.rect(self.screen, GRAY, self.create_session_button)
-        create_text = self.font.render("Create Session", True, BLACK)
-        self.screen.blit(create_text, create_text.get_rect(center=self.create_session_button.center))
-
-        g.draw.rect(self.screen, GRAY, self.join_session_button)
-        join_text = self.font.render("Join Session", True, BLACK)
-        self.screen.blit(join_text, join_text.get_rect(center=self.join_session_button.center))
-
-        g.draw.rect(self.screen, GRAY, self.store_box)
-        store_text = self.font.render("Store IP", True, BLACK)
-        self.screen.blit(store_text, store_text.get_rect(center=self.store_box.center))
-
-        g.draw.rect(self.screen, COLOR_ACTIVE if self.ip_active else COLOR_INACTIVE, self.ip_box, 2)
-        ip_surface = self.font.render(self.ip_text, True, BLACK)
-        self.screen.blit(ip_surface, (self.ip_box.x + 5, self.ip_box.y + 5))
-
-    def draw_hosting_lobby(self):
-        """Draws the screen after the host has created a session."""
-        host_ip_text = self.font.render(f"Server is running!", True, BLACK)
-        ip_info_text = self.font.render(f"Your IP is: {self.ip_text}", True, BLACK)
-        wait_text = self.font.render("Waiting for players to join...", True, GRAY)
-
-        g.draw.rect(self.screen, GRAY, self.startButton)
-        start_text = self.font.render('Start', True, BLACK)
-        text_rect = start_text.get_rect(center=self.startButton.center)
-
-        # 游戏参数设置
-        g.draw.rect(self.screen, COLOR_ACTIVE if self.minBetActive else COLOR_INACTIVE, self.minBetBox)
-        g.draw.rect(self.screen, COLOR_ACTIVE if self.initBetActive else COLOR_INACTIVE, self.initBetBox)
-        minBetSurface = self.font.render(self.minBetText, True, BLACK)
-        initBetSurface = self.font.render(self.initBetText, True, BLACK)
-        self.screen.blit(minBetSurface, (self.minBetBox.x + 5, self.minBetBox.y + 5))
-        self.screen.blit(initBetSurface, (self.initBetBox.x + 5, self.initBetBox.y + 5))
-
-        minBetLabel = self.font.render("Min bet", True, BLACK)
-        self.screen.blit(minBetLabel, (self.minBetBox.x - 120, self.minBetBox.y + 5))
-        initBetLabel = self.font.render("Init bet", True, BLACK)
-        self.screen.blit(initBetLabel, (self.initBetBox.x - 120, self.initBetBox.y + 5))
-
-        self.screen.blit(start_text, text_rect)
-        self.screen.blit(host_ip_text, (250, 150))
-        self.screen.blit(ip_info_text, (250, 200))
-        self.screen.blit(wait_text, (250, 300))
-
-    def draw_joining_lobby(self):
-        joined_text = self.font.render('Waiting for the host to start', True, BLACK)
-        self.screen.blit(joined_text, (250, 150))
-
     def draw(self):
-        self.screen.fill(WHITE)
-        if self.lobby_state == "main":
-            self.draw_main_lobby()
-        elif self.lobby_state == "hosting":
-            self.draw_hosting_lobby()
-        elif self.lobby_state == 'joining':
-            self.draw_joining_lobby()
+        self.screen.fill(g.Color("white"))
+        if self.lobby_state == "hosting":
+            self.ui_label_ip_info.set_text(self.ip_text)
+
+        time_delta = self.clock.tick(60) / 1000.0
+        self.manager.update(time_delta)
+        self.manager.draw_ui(self.screen)
         g.display.flip()
 
     def _start_server(self):
@@ -162,7 +178,7 @@ class Lobby:
             # 若房主输入了新的IP地址加入，则更新存储的用户IP
             if self.localPlayer.getIP != self.ip_text:
                 self.localPlayer.setIP(self.ip_text)
-            server.serve((self.ip_text, 3333))
+            self.server.serve((self.ip_text, 3333))
         except Exception as e:
             print(f"Error starting server thread: {e}")
 
@@ -170,6 +186,7 @@ class Lobby:
         # 房主不输入IP地址就默认调用用户数据中存储的地址
         if self.ip_text == '' and self.localPlayer.getIP != '127.0.0.1':
             self.ip_text = self.localPlayer.getIP()
+            self.ui_ip_entry.set_text(self.ip_text)
         # 若房主的IP地址未初始化，则要求房主手动输入IP地址
         elif self.ip_text == '' and self.localPlayer.getIP == '127.0.0.1':
             print('Input a valid IP to host')
@@ -180,21 +197,21 @@ class Lobby:
         # 房主先把自己放进数组
         self.players.append(
             player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money))
-        self.lobby_state = "hosting"
+        self._set_state_visibility("hosting")
 
     def joinSession(self):
         if self.ip_text == '':
             print('Input IP address to join')
             return
-        server.connect((self.ip_text, 3333))
-        if server.connected:
+        self.server.connect((self.ip_text, 3333))
+        if self.server.connected:
             # 客户端进房间以后把自己的用户信息发送给服务器
-            server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
-            self.lobby_state = 'joining'
+            self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
+            self._set_state_visibility('joining')
 
     def newGame(self):
         print("New game started.")
-        return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, server]
+        return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server]
 
     def run(self):
         while self.running:
@@ -209,13 +226,13 @@ class Lobby:
                 if self.tick < 30:
                     self.tick += 1
                 else:
-                    data = str(server.connections)
+                    data = str(self.server.connections)
                     ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
                     self.createUsers(ip_addresses)
                     self.tick = 0
 
             self.draw()
-            # 游戏帧率，60帧畅玩3A大作
+            # 游戏帧率，60帧
             self.clock.tick(60)
 
         return "STATE_QUIT", None
@@ -226,7 +243,7 @@ class Lobby:
         for ip in ip_addresses:
             try:
                 if ip not in existing_ips:
-                    player_data_string = server.get(ip)
+                    player_data_string = self.server.get(ip)
                     data_parts = player_data_string.split(',')
                     username = data_parts[0]
                     money = data_parts[2]

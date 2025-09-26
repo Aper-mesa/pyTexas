@@ -1,9 +1,19 @@
 {
   "en": {
-    "username": "username",
-    "password": "password",
-    "login_title": "pyTexas - login",
+    "username": "Username",
+    "password": "Password",
+    "login_title": "pyTexas - Login",
     "confirm_button": "Confirm",
-    "info_empty_username_or_password": "Username or password cannot be empty"
+    "info_empty_username_or_password": "Username or password cannot be empty",
+    "create_session": "Create session",
+    "join_session": "Join session",
+    "save_ip": "Save IP",
+    "server_running": "Server started, IP address is:",
+    "your_ip": "Your IP is ",
+    "wait_join": "Waiting for others to join",
+    "start": "Start",
+    "min_bet": "Minimum bet",
+    "init_bet": "Initial bet",
+    "wait_host": "Waiting for host to start"
   }
 }

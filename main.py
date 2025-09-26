@@ -25,11 +25,12 @@ def main():
             login  = Login(screen)
             loginInstance = login
             next_state, data = login.run()
+            _cleanup_scene(login, screen)
             current_state = next_state
         elif current_state == "STATE_LOBBY":
             if loginInstance:
                 if loginInstance.currentPlayer:
-                    lobby = Lobby(screen, loginInstance.currentPlayer)
+                    lobby = Lobby(screen, data,loginInstance.currentPlayer)
                     next_state, data = lobby.run()
                     current_state = next_state
         elif current_state == 'STATE_GAME':
@@ -43,6 +44,20 @@ def main():
     print("Exiting application.")
     pygame.quit()
     sys.exit()
+
+def _cleanup_scene(obj, screen):
+    # 1) 清掉 pygame_gui 的控件树（若存在）
+    if hasattr(obj, "manager") and obj.manager is not None:
+        try:
+            obj.manager.clear_and_reset()
+        except Exception:
+            pass
+    # 2) 彻底擦屏，避免残影
+    screen.fill((0, 0, 0))
+    pygame.display.flip()
+    # 3) 清空事件队列，防止“残留点击/回车”串到下个界面
+    pygame.event.clear()
+
 
 if __name__ == "__main__":
     main()

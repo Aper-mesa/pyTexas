@@ -3,7 +3,7 @@ import pygame as g
 import pygame_gui as gui
 import player
 
-os.environ["SDL_IME_SHOW_UI"] = "1"  # 开启IME候选框显示（需要SDL/系统支持）
+os.environ["SDL_IME_SHOW_UI"] = "1"
 
 
 class Login:
@@ -85,14 +85,14 @@ class Login:
 
             if event.type == g.KEYDOWN and event.key == g.K_RETURN:
                 if self.register():
-                    return 'STATE_LOBBY', self.username_entry.get_text()
+                    return 'STATE_LOBBY', self.manager
 
             self.manager.process_events(event)
 
             if event.type == gui.UI_BUTTON_PRESSED:
                 if event.ui_element == self.confirm_button:
                     if self.register():
-                        return 'STATE_LOBBY', self.username_entry.get_text()
+                        return 'STATE_LOBBY', self.manager
                 elif event.ui_element == self.language_button:
                     if self.manager.get_locale() == 'zh':
                         self.manager.set_locale('en')
@@ -116,7 +116,6 @@ class Login:
 
         if not username_text or not password_text:
             self.info_label.set_text("lang.info_empty_username_or_password")
-            self.manager.set_locale("en")
             return False
 
         ip = '127.0.0.1'
