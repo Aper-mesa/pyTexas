@@ -69,7 +69,7 @@ class Login:
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
-                return "STATE_QUIT", None
+                return "STATE_QUIT"
 
             if event.type == g.KEYDOWN and event.key == g.K_TAB:
                 if self.password_entry.is_focused:
@@ -100,8 +100,7 @@ class Login:
                     else:
                         self.manager.set_locale('zh')
                         self.language_button.set_text('英语')
-
-        return None, None
+        return None
 
     def draw(self):
         self.screen.fill((255, 255, 255))
@@ -134,8 +133,8 @@ class Login:
     # 保留原版接口：运行主循环
     def run(self):
         while self.running:
-            next_state, data = self.handle_events()
+            next_state = self.handle_events()
             if next_state:
-                return next_state, data
+                return next_state
             self.draw()
-        return "STATE_QUIT", None
+        return "STATE_QUIT"
