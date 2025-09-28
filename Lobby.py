@@ -20,6 +20,8 @@ class Lobby:
 
         self.manager = manager
 
+        self.playerInGame = None
+
         self.ip_text = ''
         self.ip_active = False
         self.minBetText = '1'
@@ -195,8 +197,8 @@ class Lobby:
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         # 房主先把自己放进数组
-        self.players.append(
-            player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money))
+        self.playerInGame = player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money)
+        self.players.append(self.playerInGame)
         self._set_state_visibility("hosting")
 
     def joinSession(self):
@@ -211,7 +213,7 @@ class Lobby:
 
     def newGame(self):
         print("New game started.")
-        return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server, self.localPlayer]
+        return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server, self.playerInGame]
 
     def run(self):
         while self.running:
