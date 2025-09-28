@@ -211,7 +211,7 @@ class Lobby:
 
     def newGame(self):
         print("New game started.")
-        return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server]
+        return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server, self.localPlayer]
 
     def run(self):
         while self.running:

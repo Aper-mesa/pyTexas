@@ -8,15 +8,14 @@ os.environ["SDL_IME_SHOW_UI"] = "1"
 
 
 class Login:
-    def __init__(self, screen):
+    def __init__(self, screen, manager):
         self.screen = screen
         g.display.set_caption("login_title")
         self.clock = g.time.Clock()
         self.running = True
         self.currentPlayer = None
 
-        self.manager = gui.UIManager((self.screen.get_size()), starting_language='zh', theme_path=tools.resource_path('theme.json'),
-                                     translation_directory_paths=[tools.resource_path('languages')])
+        self.manager = manager
 
         w, h = self.screen.get_size()
         center_x = w // 2
@@ -86,14 +85,14 @@ class Login:
 
             if event.type == g.KEYDOWN and event.key == g.K_RETURN:
                 if self.register():
-                    return 'STATE_LOBBY', self.manager
+                    return 'STATE_LOBBY'
 
             self.manager.process_events(event)
 
             if event.type == gui.UI_BUTTON_PRESSED:
                 if event.ui_element == self.confirm_button:
                     if self.register():
-                        return 'STATE_LOBBY', self.manager
+                        return 'STATE_LOBBY'
                 elif event.ui_element == self.language_button:
                     if self.manager.get_locale() == 'zh':
                         self.manager.set_locale('en')

@@ -1,16 +1,11 @@
 from random import choice  # For choosing the host
 from random import shuffle  # For shuffling the deck of cards
-import pygame_gui as gui
+
 import pygame
+import pygame_gui as gui
 
 import card  # Import the Card class for creating card instances
 import config  # Import configuration with card type/rank definitions
-import player  # Import the two player class for creating player instances
-import pygame as g
-from pygame_networking import Server
-
-from player import PlayerInGame
-
 
 class CardPool:
     """Represents a pool/deck of playing cards used in the game.
@@ -240,18 +235,20 @@ class Round:
         new_dealer = players[next_index]
         return cls(players, new_dealer)
 
+
 class Room:
     """Manages a game room where players participate in rounds, place bets, and compete.
     Handles game state, player interactions, betting pools, and round progression.
     """
+
     def __init__(self, screen, data):
         self.server = data[3]
         self.screen = screen
         self.players = data[0]  # 房间中的所有人，从房主创房那边直接传递过来
         self.activePlayers = self.players  # 在打牌的人，弃牌了就不在这了，初始和players一样
-        self.numPlayers = len(self.players)  # Total number of players in the room
-        self.minBet = data[1]  # Minimum initial bet required
-        self.initBet = data[2]
+        self.numPlayers = len(self.players)
+        self.minBet = data[1]  # 最小下注数额
+        self.initBet = data[2]  # 所有人的入局赌注数额
         self.banker = choice(self.players)  # 首次随机选一个作为庄家
         self.order = Round(self.players, self.banker)  # Manages turn order for the round
         self.betPool = 0  # Total accumulated bets in the current round
@@ -264,7 +261,7 @@ class Room:
         """Process a player's bet and add it to the pool
 
         Args:
-            player: Player instance placing the bet
+            player: Player instance placing the bet.
             bet: Amount the player wants to bet
 
         Returns:
@@ -351,28 +348,32 @@ class Room:
         self.banker = self.order.positions()["BTN"]  # Update host to button position (likely dealer)
         self.cards = CardPool()
 
-    def run(self):
-        return None, None
-
 
 class PlayScreen:
 
-    def __init__(self, screen, manager, room=None, player=None):
+    def __init__(self, screen, manager, room, localPlayer):
         self.screen = screen
         self.manager = manager
         self.clock = pygame.time.Clock()
         self.screen_width, self.screen_height = screen.get_size()
-        self.player = player
-    # -------Test data
-        self.tester = True
+        self.player = localPlayer
+        self.room = room
 
-        if not self.player:
-            cardPool = CardPool()
-            self.player = PlayerInGame("88", "0.0.0.0", 123444444)
-            for i in range(2):
-                self.player.handCards.append(cardPool.getNextCard())
+        # -------Test data
 
-    # -------End of test data
+        #     self.tester = True
+        #
+        #     if not self.player:
+        #         cardPool = CardPool()
+        #         self.player = PlayerInGame("88", "0.0.0.0", 123444444)
+        #         for i in range(2):
+        #             self.player.handCards.append(cardPool.getNextCard())
+
+        # -------End of test data
+
+        cardPool = CardPool()
+        for i in range(2): self.player.handCards.append(cardPool.getNextCard())
+
         self.renderPlayers()
         self.renderBetDisplay()
         self.renderCardSlots()
@@ -399,21 +400,18 @@ class PlayScreen:
         pygame.quit()
 
     def getPublicCards(self):
-        if self.tester:
-            cardPool = CardPool()
-            return [cardPool.getNextCard() for i in range(4) ]
-
-        return []
+        cardPool = CardPool()
+        return [cardPool.getNextCard() for i in range(4)]
 
     def getBetPool(self):
-        return 9527
+        return self.room.betPool
 
     def getPlayerNames(self):
         players = []
         playerData = []
-        if self.tester:
-            for i in range(10):
-                players.append(PlayerInGame("9527", "0.0.0.0", "10000000"))
+        # if self.tester:
+        #     for i in range(10):
+        #         players.append(PlayerInGame("9527", "0.0.0.0", "10000000"))
 
         for player in players:
             playerData.append({
@@ -515,10 +513,10 @@ class PlayScreen:
         row_spacing = 20
         first_row_width = (card_width * 3) + (spacing * 2)
         first_row_x = (self.screen_width - first_row_width) // 2 + 50
-        first_row_y = (self.screen_height // 2) - (card_height // 2) -120
+        first_row_y = (self.screen_height // 2) - (card_height // 2) - 120
 
         second_row_width = (card_width * 2) + spacing
-        second_row_x = (self.screen_width - second_row_width) // 2  + 50
+        second_row_x = (self.screen_width - second_row_width) // 2 + 50
         second_row_y = first_row_y + card_height + row_spacing
 
         publicCards = self.getPublicCards()
@@ -613,7 +611,6 @@ class PlayScreen:
                 object_id="#player_panel",
                 container=scroll_container
             )
-
 
             gui.elements.UILabel(
                 relative_rect=pygame.Rect((10, 10), (box_width - 20, 25)),

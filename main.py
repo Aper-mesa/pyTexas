@@ -10,7 +10,9 @@ import sys
 import tools
 from Login import Login
 from Lobby import Lobby
-from round import Room
+from round import Room, PlayScreen
+import pygame_gui as gui
+
 
 def main():
     running_dir = tools.resource_path('.')
@@ -33,23 +35,27 @@ def main():
     loginInstance = None
     data = None
 
+    manager = gui.UIManager((screen.get_size()), starting_language='zh',
+                            theme_path=tools.resource_path('theme.json'),
+                            translation_directory_paths=[tools.resource_path('languages')])
+
     while True:
         if current_state == "STATE_LOGIN":
-            login  = Login(screen)
+            login = Login(screen, manager)
             loginInstance = login
-            next_state, data = login.run()
+            next_state = login.run()
             _cleanup_scene(login, screen)
             current_state = next_state
         elif current_state == "STATE_LOBBY":
             if loginInstance:
                 if loginInstance.currentPlayer:
-                    lobby = Lobby(screen, data,loginInstance.currentPlayer)
+                    lobby = Lobby(screen, manager, loginInstance.currentPlayer)
                     next_state, data = lobby.run()
                     current_state = next_state
         elif current_state == 'STATE_GAME':
-            game = Room(screen, data)
-            next_state, data = game.run()
-            current_state = next_state
+            room = Room(screen, data)
+            game = PlayScreen(screen, manager, room, data[4])
+            # current_state = next_state
         elif current_state == "STATE_QUIT":
             print('exit game because of quit state')
             break
@@ -57,6 +63,7 @@ def main():
     print("Exiting application.")
     pygame.quit()
     sys.exit()
+
 
 def _cleanup_scene(obj, screen):
     # 1) 清掉 pygame_gui 的控件树（若存在）
