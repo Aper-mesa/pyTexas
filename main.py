@@ -51,10 +51,12 @@ def main():
                 if loginInstance.currentPlayer:
                     lobby = Lobby(screen, manager, loginInstance.currentPlayer)
                     next_state, data = lobby.run()
+                    _cleanup_scene(lobby, screen)
                     current_state = next_state
         elif current_state == 'STATE_GAME':
             room = Room(screen, data)
             game = PlayScreen(screen, manager, room, data[4])
+            _cleanup_scene(game, screen)
             # current_state = next_state
         elif current_state == "STATE_QUIT":
             print('exit game because of quit state')
