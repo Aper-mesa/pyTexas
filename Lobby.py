@@ -168,7 +168,7 @@ class Lobby:
                     self.createSession()
                 elif event.ui_element == self.ui_btn_store_ip and self.lobby_state == "main":
                     self.storeIP()
-                elif event.ui_element == self.ui_btn_start and self.lobby_state == "hosting":
+                elif event.ui_element == self.ui_btn_start and self.lobby_state == "connecting":
                     return self.newGame()
 
             self.manager.process_events(event)
@@ -177,7 +177,7 @@ class Lobby:
 
     def draw(self):
         self.screen.fill(g.Color("white"))
-        if self.lobby_state == "hosting":
+        if self.lobby_state == "connecting":
             self.ui_label_ip_info.set_text(self.ip_text)
 
         time_delta = self.clock.tick(60) / 1000.0
@@ -212,8 +212,8 @@ class Lobby:
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         # 房主先把自己放进数组
-        self.playerInGame = player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money)
-        self.players.append(self.playerInGame)
+        # self.playerInGame = player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money)
+        # self.players.append(self.playerInGame)
         self._set_state_visibility("hosting")
 
     def joinSession(self):
@@ -228,7 +228,7 @@ class Lobby:
             # 客户端进房间以后把自己的用户信息发送给服务器
             self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
             self._set_state_visibility('joining')
-            self.lobby_state = "joining"
+            self.lobby_state = "connecting"
 
     def newGame(self):
         print("New game started.")
@@ -243,7 +243,7 @@ class Lobby:
                 return next_state, data
 
             # 服务器逻辑
-            if self.lobby_state == 'hosting':
+            if self.lobby_state == 'connecting':
                 # 0.5秒执行一次
                 if self.tick < 30:
                     self.tick += 1
@@ -252,13 +252,6 @@ class Lobby:
                     ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
                     self.createUsers(ip_addresses)
                     self.tick = 0
-            elif self.lobby_state == 'joining':
-                if self.tick < 30:
-                    self.tick += 1
-                else:
-                    self.tick = 0
-                    return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server,
-                                          self.playerInGame]
 
             self.draw()
             # 游戏帧率，60帧
