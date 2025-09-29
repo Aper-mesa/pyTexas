@@ -20,6 +20,7 @@ def main():
     print(f"INFO: Current working directory changed to: {os.getcwd()}")
 
     pygame.init()
+    pygame.display.set_caption("pyTexas 0.5.9.29.1")
 
     i18n.set('load_path', ['languages'])
     i18n.set('filename_format', 'lang.{locale}.{format}')

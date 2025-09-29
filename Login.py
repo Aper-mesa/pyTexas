@@ -12,7 +12,6 @@ os.environ["SDL_IME_SHOW_UI"] = "1"
 class Login:
     def __init__(self, screen, manager):
         self.screen = screen
-        g.display.set_caption("login_title")
         self.clock = g.time.Clock()
         self.running = True
         self.currentPlayer = None
