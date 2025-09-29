@@ -31,6 +31,7 @@ class Lobby:
         self.infoLabelActive = False
         self.running = True
         self.lobby_state = "main"
+        self.is_client = False
 
         self.ui_btn_create = gui.elements.UIButton(
             relative_rect=g.Rect(250, 150, 300, 50),
@@ -230,6 +231,7 @@ class Lobby:
             self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
             self._set_state_visibility('joining')
             self.lobby_state = "connecting"
+            self.is_client = True
 
     def newGame(self):
         print("New game started.")
@@ -255,6 +257,8 @@ class Lobby:
                     ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
                     self.createUsers(ip_addresses)
                     self.tick = 0
+            if self.is_client:
+                self.newGame()
 
             self.draw()
             # 游戏帧率，60帧
