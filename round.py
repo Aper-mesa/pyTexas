@@ -524,16 +524,24 @@ class PlayScreen:
                 object_id="#public_card_container"
             )
             if i < len(publicCards):
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
-                    text=str(publicCards[i]),
-                    manager=self.manager,
-                    container=card_container
-                )
+                if publicCards[i]:
+                    gui.elements.UILabel(
+                        relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
+                        text=str(publicCards[i]),
+                        manager=self.manager,
+                        container=card_container
+                    )
+                else:
+                    gui.elements.UILabel(
+                        relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
+                        text="?",
+                        manager=self.manager,
+                        container=card_container
+                    )
             else:
                 gui.elements.UILabel(
                     relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
-                    text="*",
+                    text="Card Not Found",
                     manager=self.manager,
                     container=card_container
                 )
