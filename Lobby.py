@@ -234,6 +234,8 @@ class Lobby:
     def newGame(self):
         print("New game started.")
         self.server.set('game_started', 'true')
+        self.playerInGame = player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip,
+                                                self.localPlayer.money)
         return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server, self.playerInGame]
 
     def run(self):
