@@ -359,18 +359,6 @@ class PlayScreen:
         self.player = localPlayer
         self.room = room
 
-        # -------Test data
-
-        #     self.tester = True
-        #
-        #     if not self.player:
-        #         cardPool = CardPool()
-        #         self.player = PlayerInGame("88", "0.0.0.0", 123444444)
-        #         for i in range(2):
-        #             self.player.handCards.append(cardPool.getNextCard())
-
-        # -------End of test data
-
         cardPool = CardPool()
         for i in range(2): self.player.handCards.append(cardPool.getNextCard())
 

@@ -36,7 +36,7 @@ def main():
     data = None
 
     manager = gui.UIManager((screen.get_size()), starting_language='zh',
-                            theme_path=tools.resource_path('theme.json'),
+                            theme_path=tools.resource_path('themes/theme.json'),
                             translation_directory_paths=[tools.resource_path('languages')])
 
     while True:
