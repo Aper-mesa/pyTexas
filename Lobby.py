@@ -21,7 +21,7 @@ class Lobby:
         self.manager = manager
 
         self.playerInGame = None
-        self.ip_addresses = []
+        self.ip_addresses = set()
 
         self.ip_text = ''
         self.ip_active = False
@@ -207,7 +207,7 @@ class Lobby:
         # 上面两个如果都没执行，则调用用户存储的IP
         self.ip_text = self.localPlayer.getIP()
         self.ui_ip_entry.clear()
-        self.ip_addresses.append(self.localPlayer.getIP())
+        self.ip_addresses.add(self.localPlayer.getIP())
 
         # 提前定义一些服务器变量
         self.server.sync('game_started', 'false')
@@ -219,7 +219,6 @@ class Lobby:
         self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
 
     def joinSession(self):
-        print('joining session')
         if self.ip_text == '':
             self.info_label.set_text("info_ip_empty")
             return
@@ -251,7 +250,8 @@ class Lobby:
             # 服务器逻辑
             if self.lobby_state == 'hosting' or self.lobby_state == 'joining':
                 data = str(self.server.connections)
-                self.ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
+                print(data)
+                self.ip_addresses = re.findall(r"addr=\('([\d.]+)',", data)
                 if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.append(self.localPlayer.getIP())
                 self.createUsers()
                 self.tick = 0
