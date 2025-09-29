@@ -214,7 +214,7 @@ class Lobby:
 
     def joinSession(self):
         if self.ip_text == '':
-            print('Input IP address to join')
+            self.info_label.set_text("info_input_ip_first")
             return
         self.server.connect((self.ip_text, 3333))
         if self.server.connected:
