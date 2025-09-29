@@ -215,6 +215,7 @@ class Lobby:
         # self.playerInGame = player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money)
         # self.players.append(self.playerInGame)
         self._set_state_visibility("hosting")
+        self.lobby_state = "connecting"
 
     def joinSession(self):
         if self.ip_text == '':
