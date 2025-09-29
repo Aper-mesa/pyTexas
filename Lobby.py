@@ -57,7 +57,7 @@ class Lobby:
 
         #显示最近一个加入的玩家名字
         self.info_label = gui.elements.UILabel(
-            relative_rect=g.Rect(250, 50, 100, 50),
+            relative_rect=g.Rect(50, 50, 700, 50),
             text='',
             manager=self.manager
         )
@@ -128,7 +128,7 @@ class Lobby:
         hosting_elems = [
             self.ui_label_host_running, self.ui_label_ip_info, self.ui_label_wait,
             self.ui_btn_start, self.ui_label_min_bet, self.ui_entry_min_bet,
-            self.ui_label_init_bet, self.ui_entry_init_bet, self.info_label
+            self.ui_label_init_bet, self.ui_entry_init_bet
         ]
         joining_elems = [self.ui_label_joining]
 

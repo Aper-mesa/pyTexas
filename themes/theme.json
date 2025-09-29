@@ -14,7 +14,7 @@
       "selected_text": "#000000",
       "disabled_text": "#7A7A7A",
       "normal_bg": "#FFFFFF",
-      "hovered_bg": "#FFFFFF",
+      "hovered_bg": "#5486D4",
       "selected_bg": "#FFFFFF",
       "disabled_bg": "#F0F0F0",
       "normal_border": "#000000",
@@ -60,7 +60,6 @@
       "normal_border": "#000000"
     }
   },
-
   "#player_panel": {
     "colours": {
       "dark_bg": "#FFFFFF",
