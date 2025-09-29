@@ -138,10 +138,10 @@ class Lobby:
             show(main_elems)
             hide(hosting_elems)
             hide(joining_elems)
-        elif state == "connecting":
+        elif state == "hosting":
             hide(main_elems)
             show(hosting_elems)
-            show(joining_elems)
+            hide(joining_elems)
         elif state == "joining":
             hide(main_elems)
             hide(hosting_elems)
@@ -171,7 +171,7 @@ class Lobby:
                     self.createSession()
                 elif event.ui_element == self.ui_btn_store_ip and self.lobby_state == "main":
                     self.storeIP()
-                elif event.ui_element == self.ui_btn_start and self.lobby_state == "connecting":
+                elif event.ui_element == self.ui_btn_start and self.lobby_state == "hosting":
                     print('click start game')
                     return self.newGame()
 
@@ -181,7 +181,7 @@ class Lobby:
 
     def draw(self):
         self.screen.fill(g.Color("white"))
-        if self.lobby_state == "connecting":
+        if self.lobby_state == "hosting":
             self.ui_label_ip_info.set_text(self.ip_text)
 
         time_delta = self.clock.tick(60) / 1000.0
@@ -214,11 +214,8 @@ class Lobby:
 
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
-        # 房主先把自己放进数组
-        # self.playerInGame = player.PlayerInGame(self.localPlayer.username, self.localPlayer.ip, self.localPlayer.money)
-        # self.players.append(self.playerInGame)
         self._set_state_visibility("hosting")
-        self.lobby_state = "connecting"
+        self.lobby_state = "hosting"
         self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
 
     def joinSession(self):
@@ -234,7 +231,7 @@ class Lobby:
             # 客户端进房间以后把自己的用户信息发送给服务器
             self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
             self._set_state_visibility('joining')
-            self.lobby_state = "connecting"
+            self.lobby_state = "joining"
             self.is_client = True
 
     def newGame(self):
@@ -252,7 +249,7 @@ class Lobby:
                 return next_state, data
 
             # 服务器逻辑
-            if self.lobby_state == 'connecting':
+            if self.lobby_state == 'hosting' or self.lobby_state == 'joining':
                 data = str(self.server.connections)
                 self.ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
                 if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.append(self.localPlayer.getIP())
