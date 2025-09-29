@@ -46,6 +46,7 @@ class Lobby:
             relative_rect=g.Rect(250, 350, 300, 50),
             manager=self.manager
         )
+        self.ui_ip_entry.focus()
         self.ui_btn_store_ip = gui.elements.UIButton(
             relative_rect=g.Rect(250, 450, 100, 50),
             text="save_ip",

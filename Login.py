@@ -1,8 +1,10 @@
+import json
 import os
+
 import pygame as g
 import pygame_gui as gui
+
 import player
-import tools
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
 
@@ -19,6 +21,13 @@ class Login:
 
         w, h = self.screen.get_size()
         center_x = w // 2
+
+        self.password_entry = gui.elements.UITextEntryLine(
+            relative_rect=g.Rect(center_x - 40, 200, 240, 32),
+            manager=self.manager
+        )
+        self.password_entry.set_text_hidden(True)  # 密码模式
+        self.password_entry.focus()
 
         self.title_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 120, 60, 240, 40),
@@ -41,11 +50,6 @@ class Login:
             text='password',
             manager=self.manager
         )
-        self.password_entry = gui.elements.UITextEntryLine(
-            relative_rect=g.Rect(center_x - 40, 200, 240, 32),
-            manager=self.manager
-        )
-        self.password_entry.set_text_hidden(True)  # 密码模式
 
         self.confirm_button = gui.elements.UIButton(
             relative_rect=g.Rect(center_x - 60, 270, 120, 44),
@@ -64,6 +68,25 @@ class Login:
             text='',
             manager=self.manager
         )
+        self.load_saved_username()
+
+    def load_saved_username(self):
+        data_directory = 'data'
+        if os.path.exists(data_directory):
+            # 获取data目录下的第一个json文件
+            for filename in os.listdir(data_directory):
+                if filename.endswith('.json'):
+                    try:
+                        # 读取json文件
+                        with open(os.path.join(data_directory, filename), 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            # 如果有username键，设置输入框的值
+                            if 'username' in data:
+                                print("username: " + data['username'])
+                                self.username_entry.set_text(data['username'])
+                            break  # 读取第一个文件后退出
+                    except Exception as e:
+                        self.info_label.set_text(f"Error loading user data: {e}")
 
     def handle_events(self):
         for event in g.event.get():
