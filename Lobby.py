@@ -211,12 +211,14 @@ class Lobby:
 
         # 提前定义一些服务器变量
         self.server.sync('game_started', 'false')
+        self.server.sync('host_ip', '')
 
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         self._set_state_visibility("hosting")
         self.lobby_state = "hosting"
         self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
+        self.server.set('host_ip', self.localPlayer.getIP())
 
     def joinSession(self):
         if self.ip_text == '':
@@ -250,8 +252,9 @@ class Lobby:
             # 服务器逻辑
             if self.lobby_state == 'hosting' or self.lobby_state == 'joining':
                 data = str(self.server.connections)
-                self.ip_addresses = re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", data)
-                if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.append(self.localPlayer.getIP())
+                self.ip_addresses.add(re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", data))
+                if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.add(self.localPlayer.getIP())
+                if self.is_client: self.ip_addresses.add(self.server.get('host_ip'))
                 self.createUsers()
                 self.tick = 0
             if self.is_client:
