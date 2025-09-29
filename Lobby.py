@@ -205,6 +205,10 @@ class Lobby:
             return
         # 上面两个如果都没执行，则调用用户存储的IP
         self.ip_text = self.localPlayer.getIP()
+
+        # 提前定义一些服务器变量
+        self.server.sync('game_started', 'false')
+
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         # 房主先把自己放进数组
@@ -224,9 +228,11 @@ class Lobby:
             # 客户端进房间以后把自己的用户信息发送给服务器
             self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
             self._set_state_visibility('joining')
+            self.lobby_state = "joining"
 
     def newGame(self):
         print("New game started.")
+        self.server.set('game_started', 'true')
         return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server, self.playerInGame]
 
     def run(self):
@@ -246,6 +252,13 @@ class Lobby:
                     ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
                     self.createUsers(ip_addresses)
                     self.tick = 0
+            elif self.lobby_state == 'joining':
+                if self.tick < 30:
+                    self.tick += 1
+                else:
+                    self.tick = 0
+                    return 'STATE_GAME', [self.players, self.minBetText, self.initBetText, self.server,
+                                          self.playerInGame]
 
             self.draw()
             # 游戏帧率，60帧
