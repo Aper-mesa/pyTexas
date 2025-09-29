@@ -252,7 +252,7 @@ class Lobby:
             # 服务器逻辑
             if self.lobby_state == 'hosting' or self.lobby_state == 'joining':
                 data = str(self.server.connections)
-                self.ip_addresses.add(re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", data))
+                self.ip_addresses= set((re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", data)))
                 if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.add(self.localPlayer.getIP())
                 if self.is_client: self.ip_addresses.add(self.server.get('host_ip'))
                 self.createUsers()
