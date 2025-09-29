@@ -26,7 +26,6 @@ class Login:
             manager=self.manager
         )
         self.password_entry.set_text_hidden(True)  # 密码模式
-        self.password_entry.focus()
 
         self.title_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 120, 60, 240, 40),

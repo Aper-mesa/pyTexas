@@ -19,8 +19,18 @@ def main():
     os.chdir(running_dir)
     print(f"INFO: Current working directory changed to: {os.getcwd()}")
 
+    pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
     pygame.display.set_caption("pyTexas 0.5.9.29.1")
+
+    try:
+        bgm_path = tools.resource_path(os.path.join('sounds', 'bgm.mp3'))
+        pygame.mixer.music.load(bgm_path)
+        pygame.mixer.music.set_volume(0.5)  # 可调音量 0.0~1.0
+        pygame.mixer.music.play(-1)  # -1 表示无限循环
+        print(f"INFO: BGM loaded and playing: {bgm_path}")
+    except Exception as e:
+        print(f"WARNING: Failed to load/play BGM: {e}")
 
     i18n.set('load_path', ['languages'])
     i18n.set('filename_format', 'lang.{locale}.{format}')
@@ -69,16 +79,13 @@ def main():
 
 
 def _cleanup_scene(obj, screen):
-    # 1) 清掉 pygame_gui 的控件树（若存在）
     if hasattr(obj, "manager") and obj.manager is not None:
         try:
             obj.manager.clear_and_reset()
         except Exception:
             pass
-    # 2) 彻底擦屏，避免残影
     screen.fill((0, 0, 0))
     pygame.display.flip()
-    # 3) 清空事件队列，防止“残留点击/回车”串到下个界面
     pygame.event.clear()
 
 
