@@ -250,8 +250,7 @@ class Lobby:
             # 服务器逻辑
             if self.lobby_state == 'hosting' or self.lobby_state == 'joining':
                 data = str(self.server.connections)
-                print(data)
-                self.ip_addresses = re.findall(r"addr=\('([\d.]+)',", data)
+                self.ip_addresses = re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", data)
                 if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.append(self.localPlayer.getIP())
                 self.createUsers()
                 self.tick = 0
