@@ -399,8 +399,10 @@ class PlayScreen:
         pygame.quit()
 
     def getPublicCards(self):
-        cardPool = CardPool()
-        return [cardPool.getNextCard() for _ in range(5)]
+        # if self.t
+        # cardPool = CardPool()
+        # return [cardPool.getNextCard() for _ in range(5)]
+        return self.room.publicCardPool
 
     def getBetPool(self):
         return self.room.betPool
