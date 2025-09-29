@@ -21,6 +21,7 @@ class Lobby:
         self.manager = manager
 
         self.playerInGame = None
+        self.ip_addresses = []
 
         self.ip_text = ''
         self.ip_active = False
@@ -206,6 +207,8 @@ class Lobby:
             return
         # 上面两个如果都没执行，则调用用户存储的IP
         self.ip_text = self.localPlayer.getIP()
+        self.ip_addresses.append(self.localPlayer.getIP())
+        print(self.ip_addresses)
 
         # 提前定义一些服务器变量
         self.server.sync('game_started', 'false')
@@ -249,16 +252,14 @@ class Lobby:
 
             # 服务器逻辑
             if self.lobby_state == 'connecting':
-                # 0.5秒执行一次
-                if self.tick < 30:
-                    self.tick += 1
-                else:
-                    data = str(self.server.connections)
-                    ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
-                    self.createUsers(ip_addresses)
-                    self.tick = 0
+                data = str(self.server.connections)
+                self.ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
+                #if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.append(self.localPlayer.getIP())
+                self.createUsers(self.ip_addresses)
+                self.tick = 0
             if self.is_client:
-                self.newGame()
+                if self.server.get('game_started') == 'true':
+                    self.newGame()
 
             self.draw()
             # 游戏帧率，60帧
