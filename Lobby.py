@@ -28,6 +28,7 @@ class Lobby:
         self.initBetText = '50'
         self.minBetActive = False
         self.initBetActive = False
+        self.infoLabelActive = False
         self.running = True
         self.lobby_state = "main"
 
@@ -52,6 +53,14 @@ class Lobby:
         )
 
         # ---- Hosting 界面控件 ----
+
+        #显示最近一个加入的玩家名字
+        self.info_label = gui.elements.UILabel(
+            relative_rect=g.Rect(250, 50, 100, 50),
+            text='',
+            manager=self.manager
+        )
+
         self.ui_label_host_running = gui.elements.UILabel(
             relative_rect=g.Rect(150, 150, 400, 32),
             text="server_running",
@@ -118,7 +127,7 @@ class Lobby:
         hosting_elems = [
             self.ui_label_host_running, self.ui_label_ip_info, self.ui_label_wait,
             self.ui_btn_start, self.ui_label_min_bet, self.ui_entry_min_bet,
-            self.ui_label_init_bet, self.ui_entry_init_bet
+            self.ui_label_init_bet, self.ui_entry_init_bet, self.info_label
         ]
         joining_elems = [self.ui_label_joining]
 
@@ -258,6 +267,7 @@ class Lobby:
                     self.players.append(new_player)
                     for p in self.players:
                         print(p.username)
+                        self.info_label.set_text(p.username)
                         print(p.ip)
                         print(p.money)
                     existing_ips.add(ip)
