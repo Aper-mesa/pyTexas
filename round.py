@@ -7,6 +7,7 @@ import pygame_gui as gui
 import card  # Import the Card class for creating card instances
 import config  # Import configuration with card type/rank definitions
 
+
 class CardPool:
     """Represents a pool/deck of playing cards used in the game.
     Manages card creation, shuffling, and distribution.
@@ -389,7 +390,7 @@ class PlayScreen:
 
     def getPublicCards(self):
         cardPool = CardPool()
-        return [cardPool.getNextCard() for i in range(4)]
+        return [cardPool.getNextCard() for _ in range(5)]
 
     def getBetPool(self):
         return self.room.betPool
@@ -455,16 +456,15 @@ class PlayScreen:
         )
 
     def renderCardSlots(self):
-        slot_width = 100
-        slot_height = 150
-        spacing = 20
-        total_width = (slot_width * 3) + (spacing * 2)
+        slot_width = 70
+        slot_height = int(slot_width * 1.4)
+        spacing = 12
+        total_width = (slot_width * 2) + (spacing * 2)
         start_x = (self.screen_width - total_width) // 2
         start_y = self.screen_height - slot_height - 40
 
-        for i in range(3):
+        for i in range(2):
             slot_x = start_x + i * (slot_width + spacing)
-
             card_slot = gui.elements.UIPanel(
                 relative_rect=pygame.Rect(
                     (slot_x, start_y),
@@ -474,9 +474,7 @@ class PlayScreen:
                 starting_height=1,
                 object_id="#card_slot"
             )
-
             if (len(self.player.handCards) - 1) >= i:
-
                 gui.elements.UILabel(
                     relative_rect=pygame.Rect((5, 5), (slot_width - 10, slot_height - 10)),
                     text=str(self.player.handCards[i]),
@@ -492,67 +490,30 @@ class PlayScreen:
                 )
 
     def renderPublicCards(self):
-        card_width = 100
-        card_height = 120
-        spacing = 15
-        row_spacing = 20
-        first_row_width = (card_width * 3) + (spacing * 2)
-        first_row_x = (self.screen_width - first_row_width) // 2 + 50
-        first_row_y = (self.screen_height // 2) - (card_height // 2) - 120
-
-        second_row_width = (card_width * 2) + spacing
-        second_row_x = (self.screen_width - second_row_width) // 2 + 50
-        second_row_y = first_row_y + card_height + row_spacing
-
+        card_width = 64
+        card_height = int(card_width * 1.4)
+        spacing = 12
         publicCards = self.getPublicCards()
+        n = len(publicCards) if len(publicCards) > 0 else 1
+        total_width = card_width * n + spacing * (n - 1)
+        start_x = (self.screen_width - total_width) // 2
+        y = (self.screen_height // 2) - (card_height // 2)
 
-        for i in range(3):
-            card_x = first_row_x + i * (card_width + spacing)
-
+        for i in range(n):
+            card_x = start_x + i * (card_width + spacing)
             card_container = gui.elements.UIPanel(
-
                 relative_rect=pygame.Rect(
-                    (card_x, first_row_y),
+                    (card_x, y),
                     (card_width, card_height)
                 ),
                 manager=self.manager,
                 starting_height=1,
                 object_id="#public_card_container"
             )
-
             if i < len(publicCards):
                 gui.elements.UILabel(
                     relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
                     text=str(publicCards[i]),
-                    manager=self.manager,
-                    container=card_container
-                )
-            else:
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
-                    text="*",
-                    manager=self.manager,
-                    container=card_container
-                )
-
-        for i in range(2):
-            card_x = second_row_x + i * (card_width + spacing)
-            card_index = i + 3
-
-            card_container = gui.elements.UIPanel(
-                relative_rect=pygame.Rect(
-                    (card_x, second_row_y),
-                    (card_width, card_height)
-                ),
-                manager=self.manager,
-                starting_height=1,
-                object_id="#public_card_container"
-            )
-
-            if card_index < len(publicCards):
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
-                    text=str(publicCards[card_index]),
                     manager=self.manager,
                     container=card_container
                 )
