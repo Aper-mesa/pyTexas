@@ -216,7 +216,7 @@ class Lobby:
         if self.ip_text == '':
             self.info_label.set_text("info_input_ip_first")
             return
-        if self.ip_text == '127.0.0.1':
+        if self.localPlayer.getIP == '127.0.0.1':
             self.info_label.set_text("info_store_ip_first")
             return
         self.server.connect((self.ip_text, 3333))
@@ -282,4 +282,6 @@ class Lobby:
 
     def storeIP(self):
         self.localPlayer.setIP(self.ip_text)
+        self.ip_text = ''
+        self.ui_ip_entry.clear()
         self.info_label.set_text("ip_set")
