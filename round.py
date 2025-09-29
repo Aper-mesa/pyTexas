@@ -295,7 +295,7 @@ class Room:
 
     def deliverCards(self):
         self.order.setStreet("flop")
-        for i in range(3):
+        for i in range(2):
             for player in self.order:
                 card = self.cards.getNextCard()
                 player.handCards.append(card)
