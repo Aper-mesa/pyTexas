@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('languages', 'languages'), ('theme.json', '.')],
+    datas=[('languages', 'languages'), ('themes', 'themes')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
