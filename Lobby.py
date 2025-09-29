@@ -216,6 +216,9 @@ class Lobby:
         if self.ip_text == '':
             self.info_label.set_text("info_input_ip_first")
             return
+        if self.ip_text == '127.0.0.1':
+            self.info_label.set_text("info_store_ip_first")
+            return
         self.server.connect((self.ip_text, 3333))
         if self.server.connected:
             # 客户端进房间以后把自己的用户信息发送给服务器
