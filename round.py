@@ -258,6 +258,16 @@ class Room:
         self.publicCardPool = [None] * 5
         print(self.initBet)
 
+    def getDealerAndTwoPartners(self):
+        positions = self.order.positions()
+        ret = {}
+        for position in positions:
+            if position in ("BB", "SB", "BTN"):
+                player = positions[position]
+                ip = player.ip
+                ret[ip] = position
+        return ret
+
     def chipIn(self, player, bet):
         """Process a player's bet and add it to the pool
 
@@ -402,7 +412,8 @@ class PlayScreen:
         for player in players:
             playerData.append({
                 "name": player.username,
-                "chips": player.money
+                "chips": player.money,
+                "ip": player.ip
             })
 
         return playerData
@@ -531,6 +542,8 @@ class PlayScreen:
         container_y = 20
         container_height = self.screen_height * 0.6
 
+        positions = self.room.getDealerAndTwoPartners()
+
         scroll_container = gui.elements.UIScrollingContainer(
             relative_rect=pygame.Rect(
                 (container_x, container_y),
@@ -559,11 +572,21 @@ class PlayScreen:
                 container=scroll_container
             )
 
-            gui.elements.UILabel(
-                relative_rect=pygame.Rect((10, 10), (box_width - 20, 25)),
-                text=f"{player['name']}    {player['chips']} $",
-                manager=self.manager,
-                container=panel
-            )
+            ip = player['ip']
+            if not ip in positions:
+
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((10, 10), (box_width - 20, 25)),
+                    text=f"{player['name']}    {player['chips']} $",
+                    manager=self.manager,
+                    container=panel
+                )
+            else:
+                gui.elements.UILabel(
+                    relative_rect=pygame.Rect((10, 10), (box_width - 20, 25)),
+                    text=f"{positions[ip]} {player['name']}    {player['chips']} $",
+                    manager=self.manager,
+                    container=panel
+                )
         total_height = start_y + len(players) * (box_height + spacing) + 10
         scroll_container.set_scrollable_area_dimensions((box_width + 40, total_height))
