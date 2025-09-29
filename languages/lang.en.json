@@ -14,6 +14,7 @@
     "start": "Start",
     "min_bet": "Minimum bet",
     "init_bet": "Initial bet",
-    "wait_host": "Waiting for host to start"
+    "wait_host": "Waiting for host to start",
+    "ip_set": "IP地址已保存"
   }
 }

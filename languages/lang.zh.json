@@ -14,6 +14,7 @@
     "start": "开始",
     "min_bet": "最小赌注",
     "init_bet": "初始资金",
-    "wait_host": "等待房主开始"
+    "wait_host": "等待房主开始",
+    "ip_set": "IP address saved"
   }
 }

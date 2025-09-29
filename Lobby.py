@@ -278,3 +278,4 @@ class Lobby:
 
     def storeIP(self):
         self.localPlayer.setIP(self.ip_text)
+        self.info_label.set_text("ip_set")
