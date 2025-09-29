@@ -1,5 +1,5 @@
 ### ---------------打包指令---------------
-###  pyinstaller --windowed --name "pyTexas" --add-data "languages;languages" main.py
+###  pyinstaller pyTexas.spec
 ### ---------------打包指令---------------
 import os
 
