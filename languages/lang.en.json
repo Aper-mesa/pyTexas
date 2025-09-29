@@ -17,6 +17,6 @@
     "wait_host": "Waiting for host to start",
     "ip_set": "IP address saved",
     "info_store_ip_first": "Store your IP address first",
-    "info_input_ip_first": "Input host IP address first"
+    "info_ip_empty": "Input host IP address first"
   }
 }

@@ -138,10 +138,10 @@ class Lobby:
             show(main_elems)
             hide(hosting_elems)
             hide(joining_elems)
-        elif state == "hosting":
+        elif state == "connecting":
             hide(main_elems)
             show(hosting_elems)
-            hide(joining_elems)
+            show(joining_elems)
         elif state == "joining":
             hide(main_elems)
             hide(hosting_elems)
@@ -167,10 +167,12 @@ class Lobby:
                 if event.ui_element == self.ui_btn_join and self.lobby_state == "main":
                     self.joinSession()
                 elif event.ui_element == self.ui_btn_create and self.lobby_state == "main":
+                    print('click create session')
                     self.createSession()
                 elif event.ui_element == self.ui_btn_store_ip and self.lobby_state == "main":
                     self.storeIP()
                 elif event.ui_element == self.ui_btn_start and self.lobby_state == "connecting":
+                    print('click start game')
                     return self.newGame()
 
             self.manager.process_events(event)
@@ -189,9 +191,6 @@ class Lobby:
 
     def _start_server(self):
         try:
-            # 若房主输入了新的IP地址加入，则更新存储的用户IP
-            if self.localPlayer.getIP != self.ip_text:
-                self.localPlayer.setIP(self.ip_text)
             self.server.serve((self.ip_text, 3333))
         except Exception as e:
             print(f"Error starting server thread: {e}")
@@ -207,8 +206,8 @@ class Lobby:
             return
         # 上面两个如果都没执行，则调用用户存储的IP
         self.ip_text = self.localPlayer.getIP()
+        self.ui_ip_entry.clear()
         self.ip_addresses.append(self.localPlayer.getIP())
-        print(self.ip_addresses)
 
         # 提前定义一些服务器变量
         self.server.sync('game_started', 'false')
@@ -220,10 +219,12 @@ class Lobby:
         # self.players.append(self.playerInGame)
         self._set_state_visibility("hosting")
         self.lobby_state = "connecting"
+        self.server.sync(self.localPlayer.ip, self.localPlayer.getOnlineData())
 
     def joinSession(self):
+        print('joining session')
         if self.ip_text == '':
-            self.info_label.set_text("info_input_ip_first")
+            self.info_label.set_text("info_ip_empty")
             return
         if self.localPlayer.getIP == '127.0.0.1':
             self.info_label.set_text("info_store_ip_first")
@@ -254,12 +255,12 @@ class Lobby:
             if self.lobby_state == 'connecting':
                 data = str(self.server.connections)
                 self.ip_addresses = re.findall(r"raddr=\('([\d.]+)',", data)
-                #if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.append(self.localPlayer.getIP())
-                self.createUsers(self.ip_addresses)
+                if not self.localPlayer.getIP() in self.ip_addresses: self.ip_addresses.append(self.localPlayer.getIP())
+                self.createUsers()
                 self.tick = 0
             if self.is_client:
                 if self.server.get('game_started') == 'true':
-                    self.newGame()
+                    return self.newGame()
 
             self.draw()
             # 游戏帧率，60帧
@@ -267,10 +268,9 @@ class Lobby:
 
         return "STATE_QUIT", None
 
-    def createUsers(self, ip_addresses):
+    def createUsers(self):
         existing_ips = {p.ip for p in self.players}
-
-        for ip in ip_addresses:
+        for ip in self.ip_addresses:
             try:
                 if ip not in existing_ips:
                     player_data_string = self.server.get(ip)
@@ -283,6 +283,7 @@ class Lobby:
                         ip=ip,
                         money=money
                     )
+                    print('add new player in game: ' + ip)
                     self.players.append(new_player)
                     for p in self.players:
                         print(p.username)
@@ -295,6 +296,9 @@ class Lobby:
                 print(f"处理IP {ip} 时出错: {e}")
 
     def storeIP(self):
+        if self.ip_text == '':
+            self.info_label.set_text("info_ip_empty")
+            return
         self.localPlayer.setIP(self.ip_text)
         self.ip_text = ''
         self.ui_ip_entry.clear()

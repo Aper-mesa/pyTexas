@@ -17,6 +17,6 @@
     "wait_host": "等待房主开始",
     "ip_set": "IP地址已保存",
     "info_store_ip_first": "先存储你的IP地址",
-    "info_input_ip_first": "先输入房主IP地址"
+    "info_ip_empty": "IP地址不能为空"
   }
 }
