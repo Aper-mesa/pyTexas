@@ -53,5 +53,18 @@
       "hovered_border": "#000000",
       "active_border": "#000000"
     }
+  },
+  "#players_scroll_container": {
+    "colours": {
+      "dark_bg": "#FFFFFF",
+      "normal_border": "#000000"
+    }
+  },
+
+  "#player_panel": {
+    "colours": {
+      "dark_bg": "#FFFFFF",
+      "normal_border": "#000000"
+    }
   }
 }

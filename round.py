@@ -395,11 +395,8 @@ class PlayScreen:
         return self.room.betPool
 
     def getPlayerNames(self):
-        players = []
+        players = self.room.activePlayers
         playerData = []
-        # if self.tester:
-        #     for i in range(10):
-        #         players.append(PlayerInGame("9527", "0.0.0.0", "10000000"))
 
         for player in players:
             playerData.append({
@@ -588,6 +585,7 @@ class PlayScreen:
         start_y = 10
 
         players = self.getPlayerNames()
+        print(players)
 
         for i, player in enumerate(players):
             y_pos = start_y + i * (box_height + spacing)
