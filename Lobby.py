@@ -55,7 +55,7 @@ class Lobby:
 
         # ---- Hosting 界面控件 ----
 
-        #显示最近一个加入的玩家名字
+        # 显示最近一个加入的玩家名字
         self.info_label = gui.elements.UILabel(
             relative_rect=g.Rect(50, 50, 700, 50),
             text='',
@@ -201,9 +201,10 @@ class Lobby:
             self.ui_ip_entry.set_text(self.ip_text)
         # 若房主的IP地址未初始化，则要求房主手动输入IP地址
         elif self.ip_text == '' and self.localPlayer.getIP == '127.0.0.1':
-            print('Input a valid IP to host')
+            self.info_label.set_text("info_store_ip_first")
             return
-        # 上面两个如果都没执行说明房主手动输入了IP
+        # 上面两个如果都没执行，则调用用户存储的IP
+        self.ip_text = self.localPlayer.getIP()
         server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         # 房主先把自己放进数组

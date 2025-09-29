@@ -15,6 +15,7 @@
     "min_bet": "Minimum bet",
     "init_bet": "Initial bet",
     "wait_host": "Waiting for host to start",
-    "ip_set": "IP address saved"
+    "ip_set": "IP address saved",
+    "info_store_ip_first": "Store your IP address first"
   }
 }
