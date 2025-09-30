@@ -197,11 +197,11 @@ class Lobby:
 
     def createSession(self):
         # 房主不输入IP地址就默认调用用户数据中存储的地址
-        if self.ip_text == '' and self.localPlayer.getIP != '127.0.0.1':
+        if self.ip_text == '' and self.localPlayer.getIP() != '127.0.0.1':
             self.ip_text = self.localPlayer.getIP()
             self.ui_ip_entry.set_text(self.ip_text)
         # 若房主的IP地址未初始化，则要求房主手动输入IP地址
-        elif self.ip_text == '' and self.localPlayer.getIP == '127.0.0.1':
+        elif self.ip_text == '' and self.localPlayer.getIP() == '127.0.0.1':
             self.info_label.set_text("info_store_ip_first")
             return
         # 上面两个如果都没执行，则调用用户存储的IP
@@ -224,7 +224,7 @@ class Lobby:
         if self.ip_text == '':
             self.info_label.set_text("info_ip_empty")
             return
-        if self.localPlayer.getIP == '127.0.0.1':
+        if self.localPlayer.getIP() == '127.0.0.1':
             self.info_label.set_text("info_store_ip_first")
             return
         self.server.connect((self.ip_text, 3333))
