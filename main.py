@@ -17,7 +17,6 @@ import pygame_gui as gui
 def main():
     running_dir = tools.resource_path('.')
     os.chdir(running_dir)
-    print(f"INFO: Current working directory changed to: {os.getcwd()}")
 
     pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
@@ -28,7 +27,6 @@ def main():
         pygame.mixer.music.load(bgm_path)
         pygame.mixer.music.set_volume(0.5)  # 可调音量 0.0~1.0
         pygame.mixer.music.play(-1)  # -1 表示无限循环
-        print(f"INFO: BGM loaded and playing: {bgm_path}")
     except Exception as e:
         print(f"WARNING: Failed to load/play BGM: {e}")
 

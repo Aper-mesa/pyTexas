@@ -1,5 +1,8 @@
+import ctypes
 import json
 import os
+from ctypes import c_bool, c_void_p, c_char_p, c_uint64, c_int32
+from pathlib import Path
 
 import pygame as g
 import pygame_gui as gui
@@ -8,6 +11,60 @@ import player
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
 
+
+def _load_steam_identity():
+    lib = ctypes.WinDLL(str(Path(__file__).resolve().parent / "steam_api64.dll"))
+
+    SteamAPI_Init = getattr(lib, "SteamAPI_InitSafe", None) or lib.SteamAPI_Init
+    SteamAPI_Init.restype = c_bool
+
+    SteamAPI_Shutdown = lib.SteamAPI_Shutdown
+    SteamAPI_Shutdown.restype = None
+
+    SteamInternal_CreateInterface = lib.SteamInternal_CreateInterface
+    SteamInternal_CreateInterface.restype = c_void_p
+    SteamInternal_CreateInterface.argtypes = [c_char_p]
+
+    SteamAPI_GetHSteamUser = lib.SteamAPI_GetHSteamUser
+    SteamAPI_GetHSteamUser.restype = c_int32
+    SteamAPI_GetHSteamPipe = lib.SteamAPI_GetHSteamPipe
+    SteamAPI_GetHSteamPipe.restype = c_int32
+
+    # 通过 SteamClient 拿到子接口
+    GetISteamUser = lib.SteamAPI_ISteamClient_GetISteamUser
+    GetISteamUser.restype = c_void_p
+    GetISteamUser.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
+
+    GetISteamFriends = lib.SteamAPI_ISteamClient_GetISteamFriends
+    GetISteamFriends.restype = c_void_p
+    GetISteamFriends.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
+
+    # 具体方法
+    ISteamUser_GetSteamID = lib.SteamAPI_ISteamUser_GetSteamID
+    ISteamUser_GetSteamID.restype = c_uint64
+    ISteamUser_GetSteamID.argtypes = [c_void_p]
+
+    ISteamFriends_GetPersonaName = lib.SteamAPI_ISteamFriends_GetPersonaName
+    ISteamFriends_GetPersonaName.restype = c_char_p
+    ISteamFriends_GetPersonaName.argtypes = [c_void_p]
+
+    SteamAPI_Init()
+
+    try:
+        steam_client = c_void_p(SteamInternal_CreateInterface(b"SteamClient023"))
+
+        hUser = SteamAPI_GetHSteamUser()
+        hPipe = SteamAPI_GetHSteamPipe()
+
+        user = GetISteamUser(steam_client, hUser, hPipe, b"SteamUser021")
+        friends = GetISteamFriends(steam_client, hUser, hPipe, b"SteamFriends015")
+
+        steam_id = ISteamUser_GetSteamID(user)
+        persona = ISteamFriends_GetPersonaName(friends) or b"Unknown"
+        persona_name = persona.decode("utf-8", "ignore")
+        return str(steam_id), persona_name
+    finally:
+        SteamAPI_Shutdown()
 
 class Login:
     def __init__(self, screen, manager):
@@ -51,7 +108,7 @@ class Login:
 
         self.confirm_button = gui.elements.UIButton(
             relative_rect=g.Rect(center_x - 60, 270, 120, 44),
-            text='confirm_button',
+            text='enter_lobby',
             manager=self.manager
         )
 
@@ -67,6 +124,11 @@ class Login:
             manager=self.manager
         )
         self.load_saved_username()
+
+        self.currentPlayer = None
+        sid, name = _load_steam_identity()
+        self.currentPlayer = player.Player.create_from_steam(sid, name)
+        self.info_label.set_text(f"{name} (SteamID: {sid})")
 
     def load_saved_username(self):
         data_directory = 'data'

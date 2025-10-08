@@ -1,127 +1,89 @@
+# player.py
 import os
-import config  # Import configuration module with constants
-import tools  # Import utility tools module
+import config
+import tools
 
 
 class Player:
-    """Represents a player in the game with user account information and balance"""
+    """
+    玩家档案（切换到 Steam 身份体系，不再需要账号/密码/IP）。
+    以 steam_id 作为唯一主键，persona_name 作为显示名。
+    """
 
-    def __init__(self, username, password, ip, money=config.INIT_MONEY):
-        """Initialize a Player instance
+    def __init__(self, steam_id, persona_name, money=config.INIT_MONEY):
+        self.steam_id = str(steam_id)
+        self.persona_name = persona_name
+        self.money = money
 
-        Args:
-            username: Player's username
-            password: Player's password
-            money: Initial balance, defaults to value from config
-        """
-        self.username = username  # Store username
-        self.password = password  # Store password
-        self.ip = ip
-        self.money = money  # Store player's balance (in-game currency)
+    # 兼容旧代码：persona_name 暴露为 username（只读别名）
+    @property
+    def username(self):
+        return self.persona_name
 
     def __str__(self):
-        """Return string representation of the player"""
-        return self.username
+        return self.persona_name
+
+    # --------- 持久化 ---------
+    def _data_path(self):
+        # 用 steam_id 的哈希作为文件名，避免过长或非法字符
+        sid_hash = tools.nameToHash(self.steam_id)
+        return os.path.join(config.USER_DATA_PATH, sid_hash + ".json")
 
     def storeData(self):
-        """Save player data to a JSON file with hashed credentials
-
-        Stores the user's information securely by hashing username and password
-        before saving to the filesystem
-        """
-        # Hash the username for secure storage/filenaming
-        nameHash = tools.nameToHash(self.username)
-        # Hash the password for secure storage
-        pwdHash = tools.pwdToHash(self.password)
-
-        # Create full path to user's data file
-        path = os.path.join(config.USER_DATA_PATH, nameHash + ".json")
-
-        # Ensure the user data directory exists
+        """保存玩家数据"""
         tools.createPathIfNotExist(config.USER_DATA_PATH)
-
-        # Prepare data dictionary with hashed credentials and balance
         data = {
-            "username": self.username,
-            "password": pwdHash,
-            "ip": self.ip,
-            "money": self.money
+            "steam_id": self.steam_id,
+            "persona_name": self.persona_name,
+            "money": self.money,
         }
-
-        # Save data to JSON file
-        tools.setJsonData(path, data)
+        tools.setJsonData(self._data_path(), data)
 
     @classmethod
-    def create(cls, username, password, ip):
-        """Factory method to create or authenticate a Player
-
-        Creates a new player if they don't exist, or authenticates and loads
-        an existing player if they do.
-
-        Args:
-            username: Player's username
-            password: Player's password
-
-        Returns:
-            Player instance
-
-        Raises:
-            RuntimeError: If password is invalid for existing user
-            :param ip: local ip address
+    def create_from_steam(cls, steam_id, persona_name):
         """
-        # Hash username to find/create data file
-        nameHash = tools.nameToHash(username)
-        path = os.path.join(config.USER_DATA_PATH, nameHash + ".json")
+        以 Steam 身份创建/载入玩家：
+          - 如无存档：新建并返回
+          - 如有存档：读取历史 money，并在昵称变更时同步 persona_name
+        """
+        steam_id = str(steam_id)
+        sid_hash = tools.nameToHash(steam_id)
+        path = os.path.join(config.USER_DATA_PATH, sid_hash + ".json")
 
-        # Check if user already exists
         if not os.path.exists(path):
-            # Create new player if no existing data
-            print('Creating new player account')
-            return cls(username, password, ip)
-        else:
-            # Load existing user data
-            data = tools.getJsonData(path)
-            # Hash provided password for comparison
-            pwd = tools.pwdToHash(password)
-            storedPwd = data["password"]
-            ip = data["ip"]
+            p = cls(steam_id=steam_id, persona_name=persona_name)
+            p.storeData()
+            return p
 
-            # Verify password matches stored hash
-            if storedPwd != pwd:
-                return False
+        data = tools.getJsonData(path) or {}
+        saved_money = data.get("money", config.INIT_MONEY)
+        saved_persona = data.get("persona_name", persona_name)
 
-            # Return player instance with loaded data
-            # Note: Original code uses default money - might want to use data["money"] here
-            return cls(username, password, ip, money=data["money"])
+        p = cls(steam_id=steam_id, persona_name=saved_persona, money=saved_money)
+
+        if p.persona_name != persona_name:
+            p.persona_name = persona_name
+            p.storeData()
+
+        return p
+
+    # 用于大厅广播/调试：保持“三段式”，但第2段改为 steam_id（过去是 IP）
+    # 旧："username,ip,money" -> 新："persona_name,steam_id,money"
+    def getOnlineData(self):
+        return ",".join([self.persona_name, self.steam_id, str(self.money)])
 
     def getJSONData(self):
-        nameHash = tools.nameToHash(self.username)
-        path = os.path.join(config.USER_DATA_PATH, nameHash + ".json")
-        data = tools.getJsonData(path)
-        return data
+        return tools.getJsonData(self._data_path())
 
-    # 大厅中获取用户信息就用这个
-    def getOnlineData(self):
-        data_values = [
-            self.username,
-            self.ip,
-            str(self.money)
-        ]
-        output_string = ",".join(data_values)
-
-        return output_string
-
-    def setIP(self, ip):
-        self.ip = ip
-        self.storeData()
-        print('IP address has been updated')
-
-    def getIP(self):
-        return self.ip
 
 class PlayerInGame:
-    def __init__(self, username, ip, money):
-        self.username = username
-        self.ip = ip
+    """
+    对局内轻量对象；不再包含 IP。
+    """
+    def __init__(self, persona_name, money, steam_id=None):
+        self.persona_name = persona_name
+        self.username = persona_name  # 兼容旧字段名
+        self.steam_id = str(steam_id) if steam_id is not None else None
+
         self.money = money
         self.handCards = []

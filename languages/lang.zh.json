@@ -17,6 +17,7 @@
     "wait_host": "等待房主开始",
     "ip_set": "IP地址已保存",
     "info_store_ip_first": "先存储你的IP地址",
-    "info_ip_empty": "IP地址不能为空"
+    "info_ip_empty": "IP地址不能为空",
+    "enter_lobby": "进入大厅"
   }
 }
