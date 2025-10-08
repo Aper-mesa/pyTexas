@@ -25,6 +25,14 @@ def dbg(msg):
 # ================= Steam flat C bindings =================
 _DLL = ctypes.WinDLL(str(Path(__file__).resolve().parent / "steam_api64.dll"))
 
+# 回调ID
+CBID_GameRichPresenceJoinRequested = 337
+
+# 结构体（connect 是一个定长 C 字符数组，Steam 文档上是 256）
+class GameRichPresenceJoinRequested_t(ctypes.Structure):
+    _fields_ = [("m_steamIDFriend", c_uint64),
+                ("m_rgchConnect", ctypes.c_char * 256)]
+
 # Core
 SteamAPI_Init = getattr(_DLL, "SteamAPI_InitSafe", None) or _DLL.SteamAPI_Init
 SteamAPI_Init.restype = c_bool
@@ -52,6 +60,14 @@ GetISteamFriends.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
 GetISteamMatchmaking = _DLL.SteamAPI_ISteamClient_GetISteamMatchmaking
 GetISteamMatchmaking.restype = c_void_p
 GetISteamMatchmaking.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
+
+GetISteamApps = _DLL.SteamAPI_ISteamClient_GetISteamApps
+GetISteamApps.restype = c_void_p
+GetISteamApps.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
+
+ISteamApps_GetLaunchQueryParam = _DLL.SteamAPI_ISteamApps_GetLaunchQueryParam
+ISteamApps_GetLaunchQueryParam.restype = c_char_p
+ISteamApps_GetLaunchQueryParam.argtypes = [c_void_p, c_char_p]
 
 # ISteamUser
 ISteamUser_GetSteamID = _DLL.SteamAPI_ISteamUser_GetSteamID
@@ -201,7 +217,8 @@ def _steam_init_handles():
     mm = c_void_p(GetISteamMatchmaking(steam_client, hUser, hPipe, b"SteamMatchMaking009"))
     dbg("SteamAPI_Init ok")
     dbg(f"handles: user={user.value} friends={friends.value} mm={mm.value}")
-    return user, friends, mm
+    apps = c_void_p(GetISteamApps(steam_client, hUser, hPipe, b"STEAMAPPS_INTERFACE_VERSION008"))
+    return user, friends, mm, apps
 
 
 # ================= GUI Lobby State =================
@@ -221,7 +238,7 @@ class Lobby:
         self.max_members = max_members
 
         # Steam
-        self.user, self.friends, self.mm = _steam_init_handles()
+        self.user, self.friends, self.mm, self.apps = _steam_init_handles()
         self.my_steamid = ISteamUser_GetSteamID(self.user)
         self.my_name = (ISteamFriends_GetPersonaName(self.friends) or b"Unknown").decode("utf-8", "ignore")
         dbg(f"self.my_steamid={self.my_steamid}, self.my_name={self.my_name}")
@@ -288,6 +305,22 @@ class Lobby:
         # 初始化
         self._install_callbacks()
         self._load_friends_list()
+
+        # 冷启动 join：如果通过 Steam 启动并带有 connect
+        try:
+            val = ISteamApps_GetLaunchQueryParam(self.apps, b"connect")
+            if val:
+                s = val.decode('utf-8', 'ignore').strip()
+                dbg(f"launch connect param='{s}'")
+                for prefix in ("lobby:", "connect=", "steam://joinlobby/"):
+                    if s.startswith(prefix):
+                        s = s[len(prefix):]
+                lid = int(s)
+                ISteamMatchmaking_JoinLobby(self.mm, c_uint64(lid))
+                self._set_status(f"启动参数 Join -> 加入 Lobby {lid} ...")
+                dbg(f"JoinLobby via launch param: {lid}")
+        except Exception as e:
+            dbg(f"parse launch connect failed: {e}")
 
     # ---------- Steam Callbacks ----------
     def _install_callbacks(self):
@@ -358,6 +391,24 @@ class Lobby:
             self._set_status(f"好友请求加入，进入Lobby {ev.m_steamIDLobby} ...")
             dbg(f"on_game_lobby_join_requested: friend={ev.m_steamIDFriend}, lobby={ev.m_steamIDLobby}")
 
+        def on_game_rich_presence_join_requested(ev: GameRichPresenceJoinRequested_t):
+            connect = bytes(ev.m_rgchConnect).split(b'\x00', 1)[0].decode('utf-8', 'ignore')
+            dbg(f"on_game_rich_presence_join_requested: friend={ev.m_steamIDFriend}, connect='{connect}'")
+            # 你在 _after_enter_lobby() 里把 connect 设置成了 lobby_id 的纯数字字符串
+            # 如果你以后改成 "lobby:<id>" 或 "connect=<id>"，这里顺便 parse 一下
+            s = connect.strip()
+            for prefix in ("lobby:", "connect=", "steam://joinlobby/"):
+                if s.startswith(prefix):
+                    s = s[len(prefix):]
+            try:
+                lid = int(s)
+                ISteamMatchmaking_JoinLobby(self.mm, c_uint64(lid))
+                self._set_status(f"RichPresence Join -> 加入 Lobby {lid} ...")
+                dbg(f"JoinLobby via RP connect: {lid}")
+            except ValueError:
+                dbg(f"RichPresence connect 无法解析为数字 lobby id: '{connect}'")
+                self._set_status("收到 Join 请求但 connect 无效")
+
         self._cb_keep = []
         for cls_, func, cbid in [
             (LobbyCreated_t, on_lobby_created, CBID_LobbyCreated),
@@ -366,6 +417,7 @@ class Lobby:
             (LobbyDataUpdate_t, on_lobby_data_update, CBID_LobbyDataUpdate),
             (LobbyInvite_t, on_lobby_invite, CBID_LobbyInvite),
             (GameLobbyJoinRequested_t, on_game_lobby_join_requested, CBID_GameLobbyJoinRequested),
+            (GameRichPresenceJoinRequested_t, on_game_rich_presence_join_requested, CBID_GameRichPresenceJoinRequested),
         ]:
             vtbl, base = _mk_vtable(cls_, func, cbid)
             self._cb_keep.append((vtbl, base))
