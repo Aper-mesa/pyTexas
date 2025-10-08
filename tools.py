@@ -3,8 +3,6 @@ import json
 import os
 import sys
 
-import i18n
-
 
 def createPathIfNotExist(path):
     if not os.path.exists(path):
@@ -20,16 +18,14 @@ def pwdToHash(password):
 
 
 def getJsonData(path):
-    try:
-        with open(path, "r", encoding="utf8") as f:
-            return json.loads(f.read())
-    except:
-        return {}
+    with open(path, "r", encoding="utf8") as f:
+        return json.loads(f.read())
 
 
 def setJsonData(path, data):
     with open(path, "w", encoding="utf8") as f:
         f.write(json.dumps(data, ensure_ascii=False))
+
 
 def resource_path(relative_path):
     """ 获取资源的绝对路径，无论是从源码运行还是从打包后的exe运行 """

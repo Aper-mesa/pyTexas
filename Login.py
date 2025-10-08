@@ -1,5 +1,4 @@
 import ctypes
-import json
 import os
 from ctypes import c_bool, c_void_p, c_char_p, c_uint64, c_int32
 from pathlib import Path
@@ -10,7 +9,6 @@ import pygame_gui as gui
 import player
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
-
 
 def _load_steam_identity():
     lib = ctypes.WinDLL(str(Path(__file__).resolve().parent / "steam_api64.dll"))
@@ -75,34 +73,13 @@ class Login:
 
         self.manager = manager
 
+        # UI
         w, h = self.screen.get_size()
         center_x = w // 2
-
-        self.password_entry = gui.elements.UITextEntryLine(
-            relative_rect=g.Rect(center_x - 40, 200, 240, 32),
-            manager=self.manager
-        )
-        self.password_entry.set_text_hidden(True)  # 密码模式
 
         self.title_label = gui.elements.UILabel(
             relative_rect=g.Rect(center_x - 120, 60, 240, 40),
             text='login_title',
-            manager=self.manager
-        )
-
-        self.username_label = gui.elements.UILabel(
-            relative_rect=g.Rect(center_x - 180, 140, 120, 32),
-            text="username",
-            manager=self.manager
-        )
-        self.username_entry = gui.elements.UITextEntryLine(
-            relative_rect=g.Rect(center_x - 40, 140, 240, 32),
-            manager=self.manager
-        )
-
-        self.password_label = gui.elements.UILabel(
-            relative_rect=g.Rect(center_x - 180, 200, 120, 32),
-            text='password',
             manager=self.manager
         )
 
@@ -123,30 +100,11 @@ class Login:
             text='',
             manager=self.manager
         )
-        self.load_saved_username()
 
         self.currentPlayer = None
         sid, name = _load_steam_identity()
-        self.currentPlayer = player.Player.create_from_steam(sid, name)
+        self.currentPlayer = player.Player.create(sid, name)
         self.info_label.set_text(f"{name} (SteamID: {sid})")
-
-    def load_saved_username(self):
-        data_directory = 'data'
-        if os.path.exists(data_directory):
-            # 获取data目录下的第一个json文件
-            for filename in os.listdir(data_directory):
-                if filename.endswith('.json'):
-                    try:
-                        # 读取json文件
-                        with open(os.path.join(data_directory, filename), 'r', encoding='utf-8') as f:
-                            data = json.load(f)
-                            # 如果有username键，设置输入框的值
-                            if 'username' in data:
-                                print("username: " + data['username'])
-                                self.username_entry.set_text(data['username'])
-                            break  # 读取第一个文件后退出
-                    except Exception as e:
-                        self.info_label.set_text(f"Error loading user data: {e}")
 
     def handle_events(self):
         for event in g.event.get():
@@ -167,15 +125,13 @@ class Login:
                     continue
 
             if event.type == g.KEYDOWN and event.key == g.K_RETURN:
-                if self.register():
-                    return 'STATE_LOBBY'
+                return 'STATE_LOBBY'
 
             self.manager.process_events(event)
 
             if event.type == gui.UI_BUTTON_PRESSED:
                 if event.ui_element == self.confirm_button:
-                    if self.register():
-                        return 'STATE_LOBBY'
+                    return 'STATE_LOBBY'
                 elif event.ui_element == self.language_button:
                     if self.manager.get_locale() == 'zh':
                         self.manager.set_locale('en')
@@ -191,27 +147,6 @@ class Login:
         self.manager.update(time_delta)
         self.manager.draw_ui(self.screen)
         g.display.flip()
-
-    def register(self):
-        username_text = self.username_entry.get_text()
-        password_text = self.password_entry.get_text()
-
-        if not username_text or not password_text:
-            self.info_label.set_text("info_empty_username_or_password")
-            return False
-
-        ip = '127.0.0.1'
-        try:
-            p = player.Player.create(username=username_text, password=password_text, ip=ip)
-            if p:
-                player.Player.storeData(p)
-                self.currentPlayer = p
-                return True
-            else:
-                return False
-        except Exception as e:
-            self.info_label.set_text(f"Error: {e}")
-            return False
 
     # 保留原版接口：运行主循环
     def run(self):

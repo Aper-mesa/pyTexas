@@ -2,7 +2,7 @@
   "en": {
     "username": "Username",
     "password": "Password",
-    "login_title": "pyTexas - Login",
+    "login_title": "pyTexas",
     "confirm_button": "Confirm",
     "info_empty_username_or_password": "Username or password cannot be empty",
     "create_session": "Create session",
