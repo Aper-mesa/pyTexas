@@ -17,7 +17,7 @@ def main():
 
     pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
-    pygame.display.set_caption("pyTexas 0.5.9.29.2")
+    pygame.display.set_caption("pyTexas 0.5.10.9.1")
 
     try:
         bgm_path = tools.resource_path(os.path.join('sounds', 'bgm.mp3'))

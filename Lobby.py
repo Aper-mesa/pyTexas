@@ -1,14 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Lobby.py — Steamworks(Flat C, ctypes) 版本
-功能：
-  ✓ 创建公开Lobby
-  ✓ 覆盖层邀请好友加入
-  ✓ 接收好友在Steam里右键“加入游戏”
-  ✓ 游戏内好友列表 -> 一键加入好友所在Lobby
-  ✓ 显示Lobby成员username列表
-  ✗ 删除通过ID加入（无输入框、无按钮）
-"""
 import ctypes
 import time
 from ctypes import c_bool, c_void_p, c_char_p, c_int32, c_uint64, c_uint32, c_uint8, c_uint16
@@ -24,6 +14,19 @@ def dbg(msg):
 
 # ================= Steam flat C bindings =================
 _DLL = ctypes.WinDLL(str(Path(__file__).resolve().parent / "steam_api64.dll"))
+
+GetISteamUtils = _DLL.SteamAPI_ISteamClient_GetISteamUtils
+GetISteamUtils.restype = c_void_p
+GetISteamUtils.argtypes = [c_void_p, c_int32, c_char_p]
+
+ISteamUtils_IsOverlayEnabled = _DLL.SteamAPI_ISteamUtils_IsOverlayEnabled
+ISteamUtils_IsOverlayEnabled.restype = c_bool
+ISteamUtils_IsOverlayEnabled.argtypes = [c_void_p]
+
+# 回调：Overlay 激活/关闭
+CBID_GameOverlayActivated = 331
+class GameOverlayActivated_t(ctypes.Structure):
+    _fields_ = [("m_bActive", c_uint32)]  # 1=打开, 0=关闭
 
 # 回调ID
 CBID_GameRichPresenceJoinRequested = 337
@@ -78,6 +81,10 @@ ISteamUser_GetSteamID.argtypes = [c_void_p]
 ISteamFriends_GetPersonaName = _DLL.SteamAPI_ISteamFriends_GetPersonaName
 ISteamFriends_GetPersonaName.restype = c_char_p
 ISteamFriends_GetPersonaName.argtypes = [c_void_p]
+
+ISteamFriends_ActivateGameOverlay = _DLL.SteamAPI_ISteamFriends_ActivateGameOverlay
+ISteamFriends_ActivateGameOverlay.restype = None
+ISteamFriends_ActivateGameOverlay.argtypes = [c_void_p, c_char_p]
 
 ISteamFriends_GetFriendCount = _DLL.SteamAPI_ISteamFriends_GetFriendCount
 ISteamFriends_GetFriendCount.restype = c_int32
@@ -218,7 +225,8 @@ def _steam_init_handles():
     dbg("SteamAPI_Init ok")
     dbg(f"handles: user={user.value} friends={friends.value} mm={mm.value}")
     apps = c_void_p(GetISteamApps(steam_client, hUser, hPipe, b"STEAMAPPS_INTERFACE_VERSION008"))
-    return user, friends, mm, apps
+    utils = c_void_p(GetISteamUtils(steam_client, hPipe, b"SteamUtils010"))
+    return user, friends, mm, apps, utils
 
 
 # ================= GUI Lobby State =================
@@ -229,6 +237,7 @@ class Lobby:
         state = lobby.run()
     """
     def __init__(self, screen, manager, current_player: player.Player, max_members: int = 9):
+        self._overlay_lock = False
         self.screen = screen
         self.clock = g.time.Clock()
         self.manager = manager
@@ -238,7 +247,7 @@ class Lobby:
         self.max_members = max_members
 
         # Steam
-        self.user, self.friends, self.mm, self.apps = _steam_init_handles()
+        self.user, self.friends, self.mm, self.apps, self.utils = _steam_init_handles()
         self.my_steamid = ISteamUser_GetSteamID(self.user)
         self.my_name = (ISteamFriends_GetPersonaName(self.friends) or b"Unknown").decode("utf-8", "ignore")
         dbg(f"self.my_steamid={self.my_steamid}, self.my_name={self.my_name}")
@@ -321,6 +330,7 @@ class Lobby:
                 dbg(f"JoinLobby via launch param: {lid}")
         except Exception as e:
             dbg(f"parse launch connect failed: {e}")
+        dbg(f"overlay enabled? {bool(ISteamUtils_IsOverlayEnabled(self.utils))}")
 
     # ---------- Steam Callbacks ----------
     def _install_callbacks(self):
@@ -409,6 +419,11 @@ class Lobby:
                 dbg(f"RichPresence connect 无法解析为数字 lobby id: '{connect}'")
                 self._set_status("收到 Join 请求但 connect 无效")
 
+        def on_overlay(ev: GameOverlayActivated_t):
+            dbg(f"overlay active={ev.m_bActive}")
+            if ev.m_bActive == 0:
+                self._overlay_lock = False
+
         self._cb_keep = []
         for cls_, func, cbid in [
             (LobbyCreated_t, on_lobby_created, CBID_LobbyCreated),
@@ -418,6 +433,7 @@ class Lobby:
             (LobbyInvite_t, on_lobby_invite, CBID_LobbyInvite),
             (GameLobbyJoinRequested_t, on_game_lobby_join_requested, CBID_GameLobbyJoinRequested),
             (GameRichPresenceJoinRequested_t, on_game_rich_presence_join_requested, CBID_GameRichPresenceJoinRequested),
+            (GameOverlayActivated_t, on_overlay, CBID_GameOverlayActivated),
         ]:
             vtbl, base = _mk_vtable(cls_, func, cbid)
             self._cb_keep.append((vtbl, base))
@@ -476,18 +492,20 @@ class Lobby:
 
     # ---------- Actions ----------
     def create_public_lobby(self):
-        ISteamMatchmaking_CreateLobby(self.mm, ELobbyType_Public, self.max_members)
         call = ISteamMatchmaking_CreateLobby(self.mm, ELobbyType_Public, self.max_members)
         dbg(f"CreateLobby called -> SteamAPICall_t={call}")
         self._set_status("正在创建公开Lobby...")
 
     def invite_friends_via_overlay(self):
-        if self.lobby_id:
-            ISteamFriends_ActivateGameOverlayInviteDialog(self.friends, c_uint64(self.lobby_id))
-            self._set_status("已打开Steam邀请弹窗")
-        else:
+        if not self.lobby_id:
             self._set_status("请先创建或加入一个Lobby")
+            return
+        if self._overlay_lock:
+            return
+        self._overlay_lock = True
         dbg(f"invite overlay open, lobby={self.lobby_id}")
+        ISteamFriends_ActivateGameOverlayInviteDialog(self.friends, c_uint64(self.lobby_id))
+        self._set_status("已打开Steam邀请弹窗")
 
     def join_selected_friend_lobby(self):
         sel = self.friends_list.get_single_selection()
