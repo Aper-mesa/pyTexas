@@ -4,52 +4,48 @@ import tools
 
 
 class Player:
-    def __init__(self, steam_id, persona_name, money=config.INIT_MONEY):
+    def __init__(self, steam_id, username, money=config.INIT_MONEY):
         self.steam_id = str(steam_id)
-        self.persona_name = persona_name
+        self.username = username
         self.money = money
-
-    @property
-    def username(self):
-        return self.persona_name
 
     def storeData(self):
         tools.createPathIfNotExist(config.USER_DATA_PATH)
         data = {
             "steam_id": self.steam_id,
-            "persona_name": self.persona_name,
+            "username": self.username,
             "money": self.money,
         }
         tools.setJsonData(os.path.join(config.USER_DATA_PATH, self.steam_id + ".json"), data)
 
     @classmethod
-    def create(cls, steam_id, persona_name):
+    def create(cls, steam_id, username):
         steam_id = str(steam_id)
         path = os.path.join(config.USER_DATA_PATH, steam_id + ".json")
 
         if not os.path.exists(path):
-            p = cls(steam_id=steam_id, persona_name=persona_name)
+            p = cls(steam_id=steam_id, username=username)
             p.storeData()
             return p
 
         data = tools.getJsonData(path) or {}
         saved_money = data.get("money", config.INIT_MONEY)
-        saved_persona = data.get("persona_name", persona_name)
+        saved_username = data.get("username", username)
 
-        p = cls(steam_id=steam_id, persona_name=saved_persona, money=saved_money)
+        p = cls(steam_id=steam_id, username=saved_username, money=saved_money)
 
-        if p.persona_name != persona_name:
-            p.persona_name = persona_name
+        if p.username != username:
+            p.username = username
             p.storeData()
 
         return p
 
     def getOnlineData(self):
-        return ",".join([self.persona_name, self.steam_id, str(self.money)])
+        return ",".join([self.username, self.steam_id, str(self.money)])
 
 class PlayerInGame:
-    def __init__(self, persona_name, money, steam_id=None):
-        self.persona_name = persona_name
+    def __init__(self, username, money, steam_id=None):
+        self.username = username
         self.steam_id = str(steam_id) if steam_id is not None else None
 
         self.money = money

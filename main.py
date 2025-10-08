@@ -1,6 +1,3 @@
-### ---------------打包指令---------------
-###  pyinstaller pyTexas.spec
-### ---------------打包指令---------------
 import os
 
 import i18n
@@ -78,10 +75,8 @@ def main():
 
 def _cleanup_scene(obj, screen):
     if hasattr(obj, "manager") and obj.manager is not None:
-        try:
-            obj.manager.clear_and_reset()
-        except Exception:
-            pass
+        obj.manager.clear_and_reset()
+
     screen.fill((0, 0, 0))
     pygame.display.flip()
     pygame.event.clear()

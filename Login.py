@@ -73,7 +73,6 @@ class Login:
 
         self.manager = manager
 
-        # UI
         w, h = self.screen.get_size()
         center_x = w // 2
 
@@ -112,18 +111,6 @@ class Login:
                 self.running = False
                 return "STATE_QUIT"
 
-            if event.type == g.KEYDOWN and event.key == g.K_TAB:
-                if self.password_entry.is_focused:
-                    self.password_entry.unfocus()
-                    self.username_entry.focus()
-                    self.username_entry.set_text(self.username_entry.get_text())
-                    continue
-                elif self.username_entry.is_focused:
-                    self.username_entry.unfocus()
-                    self.password_entry.focus()
-                    self.password_entry.set_text(self.password_entry.get_text())
-                    continue
-
             if event.type == g.KEYDOWN and event.key == g.K_RETURN:
                 return 'STATE_LOBBY'
 
@@ -148,7 +135,6 @@ class Login:
         self.manager.draw_ui(self.screen)
         g.display.flip()
 
-    # 保留原版接口：运行主循环
     def run(self):
         while self.running:
             next_state = self.handle_events()
