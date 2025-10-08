@@ -500,10 +500,17 @@ class Lobby:
         # 设置Rich Presence，方便好友看到“Join Game”
         ISteamFriends_SetRichPresence(self.friends, b"connect", str(self.lobby_id).encode("utf-8"))
         ISteamFriends_SetRichPresence(self.friends, b"status", b"In Lobby")
+        # ✅ 关键：告诉好友列表“我在这个组里”
+        ISteamFriends_SetRichPresence(self.friends, b"steam_player_group", str(self.lobby_id).encode("utf-8"))
+        ISteamFriends_SetRichPresence(self.friends, b"steam_player_group_size", str(
+            max(1, int(ISteamMatchmaking_GetNumLobbyMembers(self.mm, self.lobby_id)))
+        ).encode("utf-8"))
         dbg(f"SetRichPresence connect={self.lobby_id}")
 
     def _after_leave_lobby(self):
         ISteamFriends_ClearRichPresence(self.friends)
+        ISteamFriends_SetRichPresence(self.friends, b"steam_player_group", b"")
+        ISteamFriends_SetRichPresence(self.friends, b"steam_player_group_size", b"")
 
     def _load_friends_list(self):
         k_EFriendFlagImmediate = 0x0001
@@ -535,6 +542,12 @@ class Lobby:
         self.member_names = names
         self.members_list.set_item_list(names)
         dbg(f"members[{len(self.member_names)}]: {self.member_names}")
+        # 刷新成员列表后，同步人数到 Rich Presence
+        if self.lobby_id:
+            ISteamFriends_SetRichPresence(
+                self.friends, b"steam_player_group_size",
+                str(len(self.member_names)).encode("utf-8")
+            )
 
     # ---------- Actions ----------
     def create_public_lobby(self):
