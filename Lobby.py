@@ -10,6 +10,7 @@ Lobby.py — Steamworks(Flat C, ctypes) 版本
   ✗ 删除通过ID加入（无输入框、无按钮）
 """
 import ctypes
+import time
 from ctypes import c_bool, c_void_p, c_char_p, c_int32, c_uint64, c_uint32, c_uint8, c_uint16
 from pathlib import Path
 
@@ -17,6 +18,9 @@ import pygame as g
 import pygame_gui as gui
 
 import player
+
+def dbg(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}")
 
 # ================= Steam flat C bindings =================
 _DLL = ctypes.WinDLL(str(Path(__file__).resolve().parent / "steam_api64.dll"))
@@ -94,6 +98,18 @@ ISteamFriends_GetFriendGamePlayed.argtypes = [c_void_p, c_uint64, ctypes.POINTER
 
 # ISteamMatchmaking
 ELobbyType_Private, ELobbyType_FriendsOnly, ELobbyType_Public, ELobbyType_Invisible = 0, 1, 2, 3
+
+ISteamMatchmaking_SetLobbyJoinable = _DLL.SteamAPI_ISteamMatchmaking_SetLobbyJoinable
+ISteamMatchmaking_SetLobbyJoinable.restype = c_bool
+ISteamMatchmaking_SetLobbyJoinable.argtypes = [c_void_p, c_uint64, c_bool]
+
+ISteamMatchmaking_SetLobbyData = _DLL.SteamAPI_ISteamMatchmaking_SetLobbyData
+ISteamMatchmaking_SetLobbyData.restype = c_bool
+ISteamMatchmaking_SetLobbyData.argtypes = [c_void_p, c_uint64, c_char_p, c_char_p]
+
+ISteamMatchmaking_SetLobbyMemberData = _DLL.SteamAPI_ISteamMatchmaking_SetLobbyMemberData
+ISteamMatchmaking_SetLobbyMemberData.restype = None
+ISteamMatchmaking_SetLobbyMemberData.argtypes = [c_void_p, c_uint64, c_char_p, c_char_p]
 
 ISteamMatchmaking_CreateLobby = _DLL.SteamAPI_ISteamMatchmaking_CreateLobby
 ISteamMatchmaking_CreateLobby.restype = c_uint64  # SteamAPICall_t
@@ -183,6 +199,8 @@ def _steam_init_handles():
     user = c_void_p(GetISteamUser(steam_client, hUser, hPipe, b"SteamUser023"))
     friends = c_void_p(GetISteamFriends(steam_client, hUser, hPipe, b"SteamFriends018"))
     mm = c_void_p(GetISteamMatchmaking(steam_client, hUser, hPipe, b"SteamMatchMaking009"))
+    dbg("SteamAPI_Init ok")
+    dbg(f"handles: user={user.value} friends={friends.value} mm={mm.value}")
     return user, friends, mm
 
 
@@ -206,6 +224,7 @@ class Lobby:
         self.user, self.friends, self.mm = _steam_init_handles()
         self.my_steamid = ISteamUser_GetSteamID(self.user)
         self.my_name = (ISteamFriends_GetPersonaName(self.friends) or b"Unknown").decode("utf-8", "ignore")
+        dbg(f"self.my_steamid={self.my_steamid}, self.my_name={self.my_name}")
 
         # Lobby runtime
         self.lobby_id = 0
@@ -296,30 +315,48 @@ class Lobby:
                 self._set_status(f"已创建Lobby：{self.lobby_id}，等待进入...")
             else:
                 self._set_status(f"创建失败，EResult={ev.m_eResult}")
+            dbg(f"on_lobby_created: result={ev.m_eResult}, lobby={ev.m_ulSteamIDLobby}")
 
         def on_lobby_enter(ev: LobbyEnter_t):
             self.lobby_id = ev.m_ulSteamIDLobby
             self._set_status(f"已进入Lobby：{self.lobby_id}")
             self._after_enter_lobby()
             self._refresh_member_names()
+            ok_joinable = ISteamMatchmaking_SetLobbyJoinable(self.mm, self.lobby_id, True)
+            dbg(f"SetLobbyJoinable(true) -> {ok_joinable}")
+
+            # 让好友“最近的大厅/同游戏好友列表”更容易发现
+            ISteamMatchmaking_SetLobbyData(self.mm, self.lobby_id, b"name", self.my_name.encode("utf-8"))
+            ISteamMatchmaking_SetLobbyData(self.mm, self.lobby_id, b"ver", b"1")
+            ISteamMatchmaking_SetLobbyData(self.mm, self.lobby_id, b"mode", b"poker")
+
+            # 写入成员名，给非好友也能看到
+            ISteamMatchmaking_SetLobbyMemberData(self.mm, self.lobby_id, b"player_name", self.my_name.encode("utf-8"))
+            dbg("Lobby data & member data set")
+
+            dbg(f"on_lobby_enter: lobby={ev.m_ulSteamIDLobby}, locked={ev.m_bLocked}, enter_resp={ev.m_EChatRoomEnterResponse}")
 
         def on_lobby_chat_update(ev: LobbyChatUpdate_t):
             if ev.m_ulSteamIDLobby == self.lobby_id:
                 self._refresh_member_names()
+            dbg(f"on_lobby_chat_update: lobby={ev.m_ulSteamIDLobby}, user_changed={ev.m_ulSteamIDUserChanged}, state_change={ev.m_rgfChatMemberStateChange}")
 
         def on_lobby_data_update(ev: LobbyDataUpdate_t):
             if ev.m_ulSteamIDLobby == self.lobby_id:
                 self._refresh_member_names()
+            dbg(f"on_lobby_data_update: lobby={ev.m_ulSteamIDLobby}, member={ev.m_ulSteamIDMember}, success={ev.m_bSuccess}")
 
         def on_lobby_invite(ev: LobbyInvite_t):
             # 收到别人邀请你 -> 自动加入（也可弹确认UI）
             ISteamMatchmaking_JoinLobby(self.mm, c_uint64(ev.m_ulSteamIDLobby))
             self._set_status(f"收到邀请，正在加入Lobby {ev.m_ulSteamIDLobby} ...")
+            dbg(f"on_lobby_invite: from={ev.m_ulSteamIDUser}, lobby={ev.m_ulSteamIDLobby}, gameid={ev.m_ulGameID}")
 
         def on_game_lobby_join_requested(ev: GameLobbyJoinRequested_t):
             # 别人在好友列表右键“加入游戏” -> 你将被请求进入该Lobby
             ISteamMatchmaking_JoinLobby(self.mm, c_uint64(ev.m_steamIDLobby))
             self._set_status(f"好友请求加入，进入Lobby {ev.m_steamIDLobby} ...")
+            dbg(f"on_game_lobby_join_requested: friend={ev.m_steamIDFriend}, lobby={ev.m_steamIDLobby}")
 
         self._cb_keep = []
         for cls_, func, cbid in [
@@ -347,6 +384,7 @@ class Lobby:
         # 设置Rich Presence，方便好友看到“Join Game”
         ISteamFriends_SetRichPresence(self.friends, b"connect", str(self.lobby_id).encode("utf-8"))
         ISteamFriends_SetRichPresence(self.friends, b"status", b"In Lobby")
+        dbg(f"SetRichPresence connect={self.lobby_id}")
 
     def _after_leave_lobby(self):
         ISteamFriends_ClearRichPresence(self.friends)
@@ -382,10 +420,13 @@ class Lobby:
             names.append(display)
         self.member_names = names
         self.members_list.set_item_list(names)
+        dbg(f"members[{len(self.member_names)}]: {self.member_names}")
 
     # ---------- Actions ----------
     def create_public_lobby(self):
         ISteamMatchmaking_CreateLobby(self.mm, ELobbyType_Public, self.max_members)
+        call = ISteamMatchmaking_CreateLobby(self.mm, ELobbyType_Public, self.max_members)
+        dbg(f"CreateLobby called -> SteamAPICall_t={call}")
         self._set_status("正在创建公开Lobby...")
 
     def invite_friends_via_overlay(self):
@@ -394,6 +435,7 @@ class Lobby:
             self._set_status("已打开Steam邀请弹窗")
         else:
             self._set_status("请先创建或加入一个Lobby")
+        dbg(f"invite overlay open, lobby={self.lobby_id}")
 
     def join_selected_friend_lobby(self):
         sel = self.friends_list.get_single_selection()
@@ -412,6 +454,9 @@ class Lobby:
                 self._set_status("该好友当前不在可加入的Lobby")
         else:
             self._set_status("该好友未在游戏中或不可加入")
+        dbg(f"join_selected_friend_lobby: pick_idx={idx}, friend_id={fid}")
+        ok = ISteamFriends_GetFriendGamePlayed(self.friends, fid, ctypes.byref(info))
+        dbg(f"GetFriendGamePlayed ok={ok}, lobby={info.m_steamIDLobby}, gameid={info.m_gameID}")
 
     def leave_lobby(self):
         if self.lobby_id:
