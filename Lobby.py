@@ -2,241 +2,277 @@
 import ctypes
 import time
 from ctypes import c_bool, c_void_p, c_char_p, c_int32, c_uint64, c_uint32, c_uint8, c_uint16
-from pathlib import Path
-
 import pygame as g
 import pygame_gui as gui
-
 import player
+import steam_bootstrap as steam
 
-def dbg(msg):
+
+def dbg(msg: str):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}")
 
-# ================= Steam flat C bindings =================
-_DLL = ctypes.WinDLL(str(Path(__file__).resolve().parent / "steam_api64.dll"))
 
-GetISteamUtils = _DLL.SteamAPI_ISteamClient_GetISteamUtils
-GetISteamUtils.restype = c_void_p
-GetISteamUtils.argtypes = [c_void_p, c_int32, c_char_p]
-
-ISteamUtils_IsOverlayEnabled = _DLL.SteamAPI_ISteamUtils_IsOverlayEnabled
-ISteamUtils_IsOverlayEnabled.restype = c_bool
-ISteamUtils_IsOverlayEnabled.argtypes = [c_void_p]
-
-# 回调：Overlay 激活/关闭
-CBID_GameOverlayActivated = 331
-class GameOverlayActivated_t(ctypes.Structure):
-    _fields_ = [("m_bActive", c_uint32)]  # 1=打开, 0=关闭
-
-# 回调ID
-CBID_GameRichPresenceJoinRequested = 337
-
-# 结构体（connect 是一个定长 C 字符数组，Steam 文档上是 256）
-class GameRichPresenceJoinRequested_t(ctypes.Structure):
-    _fields_ = [("m_steamIDFriend", c_uint64),
-                ("m_rgchConnect", ctypes.c_char * 256)]
-
-# Core
-SteamAPI_Init = getattr(_DLL, "SteamAPI_InitSafe", None) or _DLL.SteamAPI_Init
-SteamAPI_Init.restype = c_bool
-SteamAPI_Shutdown = _DLL.SteamAPI_Shutdown
-SteamAPI_RunCallbacks = _DLL.SteamAPI_RunCallbacks
-
-SteamInternal_CreateInterface = _DLL.SteamInternal_CreateInterface
-SteamInternal_CreateInterface.restype = c_void_p
-SteamInternal_CreateInterface.argtypes = [c_char_p]
-
-SteamAPI_GetHSteamUser = _DLL.SteamAPI_GetHSteamUser
-SteamAPI_GetHSteamUser.restype = c_int32
-SteamAPI_GetHSteamPipe = _DLL.SteamAPI_GetHSteamPipe
-SteamAPI_GetHSteamPipe.restype = c_int32
-
-# ISteamClient -> sub-interfaces
-GetISteamUser = _DLL.SteamAPI_ISteamClient_GetISteamUser
-GetISteamUser.restype = c_void_p
-GetISteamUser.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
-
-GetISteamFriends = _DLL.SteamAPI_ISteamClient_GetISteamFriends
-GetISteamFriends.restype = c_void_p
-GetISteamFriends.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
-
-GetISteamMatchmaking = _DLL.SteamAPI_ISteamClient_GetISteamMatchmaking
-GetISteamMatchmaking.restype = c_void_p
-GetISteamMatchmaking.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
-
-GetISteamApps = _DLL.SteamAPI_ISteamClient_GetISteamApps
-GetISteamApps.restype = c_void_p
-GetISteamApps.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
-
-ISteamApps_GetLaunchQueryParam = _DLL.SteamAPI_ISteamApps_GetLaunchQueryParam
-ISteamApps_GetLaunchQueryParam.restype = c_char_p
-ISteamApps_GetLaunchQueryParam.argtypes = [c_void_p, c_char_p]
-
-# ISteamUser
-ISteamUser_GetSteamID = _DLL.SteamAPI_ISteamUser_GetSteamID
-ISteamUser_GetSteamID.restype = c_uint64
-ISteamUser_GetSteamID.argtypes = [c_void_p]
-
-# ISteamFriends（常用）
-ISteamFriends_GetPersonaName = _DLL.SteamAPI_ISteamFriends_GetPersonaName
-ISteamFriends_GetPersonaName.restype = c_char_p
-ISteamFriends_GetPersonaName.argtypes = [c_void_p]
-
-ISteamFriends_ActivateGameOverlay = _DLL.SteamAPI_ISteamFriends_ActivateGameOverlay
-ISteamFriends_ActivateGameOverlay.restype = None
-ISteamFriends_ActivateGameOverlay.argtypes = [c_void_p, c_char_p]
-
-ISteamFriends_GetFriendCount = _DLL.SteamAPI_ISteamFriends_GetFriendCount
-ISteamFriends_GetFriendCount.restype = c_int32
-ISteamFriends_GetFriendCount.argtypes = [c_void_p, c_int32]  # flags
-
-ISteamFriends_GetFriendByIndex = _DLL.SteamAPI_ISteamFriends_GetFriendByIndex
-ISteamFriends_GetFriendByIndex.restype = c_uint64
-ISteamFriends_GetFriendByIndex.argtypes = [c_void_p, c_int32, c_int32]
-
-ISteamFriends_GetFriendPersonaName = _DLL.SteamAPI_ISteamFriends_GetFriendPersonaName
-ISteamFriends_GetFriendPersonaName.restype = c_char_p
-ISteamFriends_GetFriendPersonaName.argtypes = [c_void_p, c_uint64]
-
-ISteamFriends_ActivateGameOverlayInviteDialog = _DLL.SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog
-ISteamFriends_ActivateGameOverlayInviteDialog.restype = None
-ISteamFriends_ActivateGameOverlayInviteDialog.argtypes = [c_void_p, c_uint64]
-
-ISteamFriends_SetRichPresence = _DLL.SteamAPI_ISteamFriends_SetRichPresence
-ISteamFriends_SetRichPresence.restype = c_bool
-ISteamFriends_SetRichPresence.argtypes = [c_void_p, c_char_p, c_char_p]
-
-ISteamFriends_ClearRichPresence = _DLL.SteamAPI_ISteamFriends_ClearRichPresence
-ISteamFriends_ClearRichPresence.restype = None
-ISteamFriends_ClearRichPresence.argtypes = [c_void_p]
-
-# 获取好友的游戏信息（含LobbyID）
+# ======== ctypes 结构体（与 DLL 无关，可在导入期定义）========
 class FriendGameInfo_t(ctypes.Structure):
-    _fields_ = [("m_gameID", c_uint64), ("m_unGameIP", c_uint32),
-                ("m_usGamePort", c_uint16), ("m_usQueryPort", c_uint16),
-                ("m_steamIDLobby", c_uint64)]
-ISteamFriends_GetFriendGamePlayed = _DLL.SteamAPI_ISteamFriends_GetFriendGamePlayed
-ISteamFriends_GetFriendGamePlayed.restype = c_bool
-ISteamFriends_GetFriendGamePlayed.argtypes = [c_void_p, c_uint64, ctypes.POINTER(FriendGameInfo_t)]
+    _fields_ = [
+        ("m_gameID", c_uint64),
+        ("m_unGameIP", c_uint32),
+        ("m_usGamePort", c_uint16),
+        ("m_usQueryPort", c_uint16),
+        ("m_steamIDLobby", c_uint64),
+    ]
 
-# ISteamMatchmaking
-ELobbyType_Private, ELobbyType_FriendsOnly, ELobbyType_Public, ELobbyType_Invisible = 0, 1, 2, 3
 
-ISteamMatchmaking_SetLobbyJoinable = _DLL.SteamAPI_ISteamMatchmaking_SetLobbyJoinable
-ISteamMatchmaking_SetLobbyJoinable.restype = c_bool
-ISteamMatchmaking_SetLobbyJoinable.argtypes = [c_void_p, c_uint64, c_bool]
-
-ISteamMatchmaking_SetLobbyData = _DLL.SteamAPI_ISteamMatchmaking_SetLobbyData
-ISteamMatchmaking_SetLobbyData.restype = c_bool
-ISteamMatchmaking_SetLobbyData.argtypes = [c_void_p, c_uint64, c_char_p, c_char_p]
-
-ISteamMatchmaking_SetLobbyMemberData = _DLL.SteamAPI_ISteamMatchmaking_SetLobbyMemberData
-ISteamMatchmaking_SetLobbyMemberData.restype = None
-ISteamMatchmaking_SetLobbyMemberData.argtypes = [c_void_p, c_uint64, c_char_p, c_char_p]
-
-ISteamMatchmaking_CreateLobby = _DLL.SteamAPI_ISteamMatchmaking_CreateLobby
-ISteamMatchmaking_CreateLobby.restype = c_uint64  # SteamAPICall_t
-ISteamMatchmaking_CreateLobby.argtypes = [c_void_p, c_int32, c_int32]
-
-ISteamMatchmaking_JoinLobby = _DLL.SteamAPI_ISteamMatchmaking_JoinLobby
-ISteamMatchmaking_JoinLobby.restype = c_uint64  # SteamAPICall_t
-ISteamMatchmaking_JoinLobby.argtypes = [c_void_p, c_uint64]
-
-ISteamMatchmaking_LeaveLobby = _DLL.SteamAPI_ISteamMatchmaking_LeaveLobby
-ISteamMatchmaking_LeaveLobby.restype = None
-ISteamMatchmaking_LeaveLobby.argtypes = [c_void_p, c_uint64]
-
-ISteamMatchmaking_GetNumLobbyMembers = _DLL.SteamAPI_ISteamMatchmaking_GetNumLobbyMembers
-ISteamMatchmaking_GetNumLobbyMembers.restype = c_int32
-ISteamMatchmaking_GetNumLobbyMembers.argtypes = [c_void_p, c_uint64]
-
-ISteamMatchmaking_GetLobbyMemberByIndex = _DLL.SteamAPI_ISteamMatchmaking_GetLobbyMemberByIndex
-ISteamMatchmaking_GetLobbyMemberByIndex.restype = c_uint64
-ISteamMatchmaking_GetLobbyMemberByIndex.argtypes = [c_void_p, c_uint64, c_int32]
-
-# 为了非好友成员名，读取 member data "player_name"
-ISteamMatchmaking_GetLobbyMemberData = _DLL.SteamAPI_ISteamMatchmaking_GetLobbyMemberData
-ISteamMatchmaking_GetLobbyMemberData.restype = c_char_p
-ISteamMatchmaking_GetLobbyMemberData.argtypes = [c_void_p, c_uint64, c_uint64, c_char_p]
-
-# callbacks 基础
-SteamAPI_RegisterCallback = _DLL.SteamAPI_RegisterCallback
-SteamAPI_UnregisterCallback = _DLL.SteamAPI_UnregisterCallback
-SteamAPI_RegisterCallback.restype = None
-SteamAPI_RegisterCallback.argtypes = [c_void_p, c_int32]
-SteamAPI_UnregisterCallback.restype = None
-SteamAPI_UnregisterCallback.argtypes = [c_void_p]
-
-class _CallbackBase(ctypes.Structure):
-    _fields_ = [("vtable", c_void_p), ("m_iCallback", c_int32)]
-
-CALLBACK_RUN = ctypes.CFUNCTYPE(None, c_void_p, c_void_p)
-CALLBACK_RUNARGS = ctypes.CFUNCTYPE(None, c_void_p, c_void_p, c_bool, c_uint64)
-CALLBACK_GETSIZE = ctypes.CFUNCTYPE(ctypes.c_int)
-
-class _CallbackVTable(ctypes.Structure):
-    _fields_ = [("Run", CALLBACK_RUN), ("RunArgs", CALLBACK_RUNARGS), ("GetCallbackSizeBytes", CALLBACK_GETSIZE)]
-
-# 回调ID（见 steam_api.json）
-CBID_LobbyCreated            = 513
-CBID_LobbyEnter              = 504
-CBID_LobbyChatUpdate         = 506
-CBID_LobbyDataUpdate         = 505
-CBID_LobbyInvite             = 503  # 收到别人邀请你
-CBID_GameLobbyJoinRequested  = 333  # 别人在好友界面“加入你”
-
-# 回调结构
 class LobbyCreated_t(ctypes.Structure):
     _fields_ = [("m_eResult", c_int32), ("m_ulSteamIDLobby", c_uint64)]
 
+
 class LobbyEnter_t(ctypes.Structure):
-    _fields_ = [("m_ulSteamIDLobby", c_uint64),
-                ("m_rgfChatPermissions", c_uint32),
-                ("m_bLocked", c_uint8),
-                ("m_EChatRoomEnterResponse", c_uint32)]
+    _fields_ = [
+        ("m_ulSteamIDLobby", c_uint64),
+        ("m_rgfChatPermissions", c_uint32),
+        ("m_bLocked", c_uint8),
+        ("m_EChatRoomEnterResponse", c_uint32),
+    ]
+
 
 class LobbyChatUpdate_t(ctypes.Structure):
-    _fields_ = [("m_ulSteamIDLobby", c_uint64),
-                ("m_ulSteamIDUserChanged", c_uint64),
-                ("m_ulSteamIDMakingChange", c_uint64),
-                ("m_rgfChatMemberStateChange", c_uint32)]
+    _fields_ = [
+        ("m_ulSteamIDLobby", c_uint64),
+        ("m_ulSteamIDUserChanged", c_uint64),
+        ("m_ulSteamIDMakingChange", c_uint64),
+        ("m_rgfChatMemberStateChange", c_uint32),
+    ]
+
 
 class LobbyDataUpdate_t(ctypes.Structure):
-    _fields_ = [("m_ulSteamIDLobby", c_uint64),
-                ("m_ulSteamIDMember", c_uint64),
-                ("m_bSuccess", c_uint8)]
+    _fields_ = [
+        ("m_ulSteamIDLobby", c_uint64),
+        ("m_ulSteamIDMember", c_uint64),
+        ("m_bSuccess", c_uint8),
+    ]
+
 
 class LobbyInvite_t(ctypes.Structure):
     _fields_ = [("m_ulSteamIDUser", c_uint64), ("m_ulSteamIDLobby", c_uint64), ("m_ulGameID", c_uint64)]
+
 
 class GameLobbyJoinRequested_t(ctypes.Structure):
     _fields_ = [("m_steamIDLobby", c_uint64), ("m_steamIDFriend", c_uint64)]
 
 
-def _steam_init_handles():
-    """Init + 获取各接口实例"""
-    SteamAPI_Init()
-    steam_client = c_void_p(SteamInternal_CreateInterface(b"SteamClient023"))
-    hUser = SteamAPI_GetHSteamUser()
-    hPipe = SteamAPI_GetHSteamPipe()
-    user = c_void_p(GetISteamUser(steam_client, hUser, hPipe, b"SteamUser023"))
-    friends = c_void_p(GetISteamFriends(steam_client, hUser, hPipe, b"SteamFriends018"))
-    mm = c_void_p(GetISteamMatchmaking(steam_client, hUser, hPipe, b"SteamMatchMaking009"))
-    dbg("SteamAPI_Init ok")
-    dbg(f"handles: user={user.value} friends={friends.value} mm={mm.value}")
-    apps = c_void_p(GetISteamApps(steam_client, hUser, hPipe, b"STEAMAPPS_INTERFACE_VERSION008"))
-    utils = c_void_p(GetISteamUtils(steam_client, hPipe, b"SteamUtils010"))
-    return user, friends, mm, apps, utils
+class GameRichPresenceJoinRequested_t(ctypes.Structure):
+    _fields_ = [("m_steamIDFriend", c_uint64), ("m_rgchConnect", ctypes.c_char * 256)]
+
+
+class GameOverlayActivated_t(ctypes.Structure):
+    _fields_ = [("m_bActive", c_uint32)]  # 1=打开, 0=关闭
+
+
+# ======== 全局常量 ========
+ELobbyType_Private, ELobbyType_FriendsOnly, ELobbyType_Public, ELobbyType_Invisible = 0, 1, 2, 3
+CBID_LobbyCreated = 513
+CBID_LobbyEnter = 504
+CBID_LobbyChatUpdate = 506
+CBID_LobbyDataUpdate = 505
+CBID_LobbyInvite = 503
+CBID_GameLobbyJoinRequested = 333
+CBID_GameRichPresenceJoinRequested = 337
+CBID_GameOverlayActivated = 331
+
+
+# ======== 回调基础类型 ========
+class _CallbackBase(ctypes.Structure):
+    _fields_ = [("vtable", c_void_p), ("m_iCallback", c_int32)]
+
+
+CALLBACK_RUN = ctypes.CFUNCTYPE(None, c_void_p, c_void_p)
+CALLBACK_RUNARGS = ctypes.CFUNCTYPE(None, c_void_p, c_void_p, c_bool, c_uint64)
+CALLBACK_GETSIZE = ctypes.CFUNCTYPE(ctypes.c_int)
+
+
+class _CallbackVTable(ctypes.Structure):
+    _fields_ = [("Run", CALLBACK_RUN), ("RunArgs", CALLBACK_RUNARGS), ("GetCallbackSizeBytes", CALLBACK_GETSIZE)]
+
+
+# ======== 延迟绑定的 Steam 函数指针（模块导入阶段不取 DLL）========
+# （全部在 _bind_steam_functions() 里赋值）
+ISteamUser_GetSteamID = None
+ISteamFriends_GetPersonaName = None
+ISteamFriends_GetFriendCount = None
+ISteamFriends_GetFriendByIndex = None
+ISteamFriends_GetFriendPersonaName = None
+ISteamFriends_ActivateGameOverlayInviteDialog = None
+ISteamFriends_SetRichPresence = None
+ISteamFriends_ClearRichPresence = None
+ISteamFriends_GetFriendGamePlayed = None
+ISteamUtils_IsOverlayEnabled = None
+ISteamApps_GetLaunchQueryParam = None
+ISteamMatchmaking_CreateLobby = None
+ISteamMatchmaking_JoinLobby = None
+ISteamMatchmaking_LeaveLobby = None
+ISteamMatchmaking_GetNumLobbyMembers = None
+ISteamMatchmaking_GetLobbyMemberByIndex = None
+ISteamMatchmaking_GetLobbyMemberData = None
+ISteamMatchmaking_SetLobbyJoinable = None
+ISteamMatchmaking_SetLobbyData = None
+ISteamMatchmaking_SetLobbyMemberData = None
+SteamAPI_RegisterCallback = None
+SteamAPI_UnregisterCallback = None
+
+
+def _bind_steam_functions():
+    """在 __init__ 里调用。要求 steam_bootstrap.init() 已经完成。"""
+    global ISteamUser_GetSteamID, ISteamFriends_GetPersonaName, ISteamFriends_GetFriendCount
+    global ISteamFriends_GetFriendByIndex, ISteamFriends_GetFriendPersonaName
+    global ISteamFriends_ActivateGameOverlayInviteDialog, ISteamFriends_SetRichPresence, ISteamFriends_ClearRichPresence
+    global ISteamFriends_GetFriendGamePlayed, ISteamUtils_IsOverlayEnabled, ISteamApps_GetLaunchQueryParam
+    global ISteamMatchmaking_CreateLobby, ISteamMatchmaking_JoinLobby, ISteamMatchmaking_LeaveLobby
+    global ISteamMatchmaking_GetNumLobbyMembers, ISteamMatchmaking_GetLobbyMemberByIndex
+    global ISteamMatchmaking_GetLobbyMemberData, ISteamMatchmaking_SetLobbyJoinable
+    global ISteamMatchmaking_SetLobbyData, ISteamMatchmaking_SetLobbyMemberData
+    global SteamAPI_RegisterCallback, SteamAPI_UnregisterCallback
+
+    DLL = steam.DLL
+    if DLL is None:
+        raise RuntimeError("Steam 未初始化。请确保在 main.py 中已调用 steam.init()。")
+
+    # ISteamUser
+    fn = DLL.SteamAPI_ISteamUser_GetSteamID
+    fn.restype = c_uint64
+    fn.argtypes = [c_void_p]
+    ISteamUser_GetSteamID = fn
+
+    # ISteamFriends
+    fn = DLL.SteamAPI_ISteamFriends_GetPersonaName
+    fn.restype = c_char_p
+    fn.argtypes = [c_void_p]
+    ISteamFriends_GetPersonaName = fn
+
+    fn = DLL.SteamAPI_ISteamFriends_GetFriendCount
+    fn.restype = c_int32
+    fn.argtypes = [c_void_p, c_int32]
+    ISteamFriends_GetFriendCount = fn
+
+    fn = DLL.SteamAPI_ISteamFriends_GetFriendByIndex
+    fn.restype = c_uint64
+    fn.argtypes = [c_void_p, c_int32, c_int32]
+    ISteamFriends_GetFriendByIndex = fn
+
+    fn = DLL.SteamAPI_ISteamFriends_GetFriendPersonaName
+    fn.restype = c_char_p
+    fn.argtypes = [c_void_p, c_uint64]
+    ISteamFriends_GetFriendPersonaName = fn
+
+    fn = DLL.SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog
+    fn.restype = None
+    fn.argtypes = [c_void_p, c_uint64]
+    ISteamFriends_ActivateGameOverlayInviteDialog = fn
+
+    fn = DLL.SteamAPI_ISteamFriends_SetRichPresence
+    fn.restype = c_bool
+    fn.argtypes = [c_void_p, c_char_p, c_char_p]
+    ISteamFriends_SetRichPresence = fn
+
+    fn = DLL.SteamAPI_ISteamFriends_ClearRichPresence
+    fn.restype = None
+    fn.argtypes = [c_void_p]
+    ISteamFriends_ClearRichPresence = fn
+
+    fn = DLL.SteamAPI_ISteamFriends_GetFriendGamePlayed
+    fn.restype = c_bool
+    fn.argtypes = [c_void_p, c_uint64, ctypes.POINTER(FriendGameInfo_t)]
+    ISteamFriends_GetFriendGamePlayed = fn
+
+    # ISteamUtils
+    fn = DLL.SteamAPI_ISteamClient_GetISteamUtils
+    fn.restype = c_void_p
+    fn.argtypes = [c_void_p, c_int32, c_char_p]
+    GetISteamUtils = fn  # 仅用于获取 utils 句柄（已在 bootstrap 做过）
+
+    fn = DLL.SteamAPI_ISteamUtils_IsOverlayEnabled
+    fn.restype = c_bool
+    fn.argtypes = [c_void_p]
+    ISteamUtils_IsOverlayEnabled = fn
+
+    # ISteamApps
+    fn = DLL.SteamAPI_ISteamApps_GetLaunchQueryParam
+    fn.restype = c_char_p
+    fn.argtypes = [c_void_p, c_char_p]
+    ISteamApps_GetLaunchQueryParam = fn
+
+    # ISteamMatchmaking
+    fn = DLL.SteamAPI_ISteamMatchmaking_CreateLobby
+    fn.restype = c_uint64
+    fn.argtypes = [c_void_p, c_int32, c_int32]
+    ISteamMatchmaking_CreateLobby = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_JoinLobby
+    fn.restype = c_uint64
+    fn.argtypes = [c_void_p, c_uint64]
+    ISteamMatchmaking_JoinLobby = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_LeaveLobby
+    fn.restype = None
+    fn.argtypes = [c_void_p, c_uint64]
+    ISteamMatchmaking_LeaveLobby = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_GetNumLobbyMembers
+    fn.restype = c_int32
+    fn.argtypes = [c_void_p, c_uint64]
+    ISteamMatchmaking_GetNumLobbyMembers = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_GetLobbyMemberByIndex
+    fn.restype = c_uint64
+    fn.argtypes = [c_void_p, c_uint64, c_int32]
+    ISteamMatchmaking_GetLobbyMemberByIndex = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_GetLobbyMemberData
+    fn.restype = c_char_p
+    fn.argtypes = [c_void_p, c_uint64, c_uint64, c_char_p]
+    ISteamMatchmaking_GetLobbyMemberData = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_SetLobbyJoinable
+    fn.restype = c_bool
+    fn.argtypes = [c_void_p, c_uint64, c_bool]
+    ISteamMatchmaking_SetLobbyJoinable = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_SetLobbyData
+    fn.restype = c_bool
+    fn.argtypes = [c_void_p, c_uint64, c_char_p, c_char_p]
+    ISteamMatchmaking_SetLobbyData = fn
+
+    fn = DLL.SteamAPI_ISteamMatchmaking_SetLobbyMemberData
+    fn.restype = None
+    fn.argtypes = [c_void_p, c_uint64, c_char_p, c_char_p]
+    ISteamMatchmaking_SetLobbyMemberData = fn
+
+    # Callbacks
+    fn = DLL.SteamAPI_RegisterCallback
+    fn.restype = None
+    fn.argtypes = [c_void_p, c_int32]
+    SteamAPI_RegisterCallback = fn
+
+    fn = DLL.SteamAPI_UnregisterCallback
+    fn.restype = None
+    fn.argtypes = [c_void_p]
+    SteamAPI_UnregisterCallback = fn
 
 
 # ================= GUI Lobby State =================
 class Lobby:
     """
-    入口：
+    用法：
         lobby = Lobby(screen, manager, current_player)
-        state = lobby.run()
+        next_state, data = lobby.run()
     """
     def __init__(self, screen, manager, current_player: player.Player, max_members: int = 9):
+        # 绑定函数（确保 steam.init() 已先在 main 里调用）
+        _bind_steam_functions()
+
+        # Steam 句柄
+        self.user, self.friends, self.mm, self.apps, self.utils = steam.get_handles()
+
         self._overlay_lock = False
         self.screen = screen
         self.clock = g.time.Clock()
@@ -246,8 +282,7 @@ class Lobby:
         self.current_player = current_player
         self.max_members = max_members
 
-        # Steam
-        self.user, self.friends, self.mm, self.apps, self.utils = _steam_init_handles()
+        # 自己的信息
         self.my_steamid = ISteamUser_GetSteamID(self.user)
         self.my_name = (ISteamFriends_GetPersonaName(self.friends) or b"Unknown").decode("utf-8", "ignore")
         dbg(f"self.my_steamid={self.my_steamid}, self.my_name={self.my_name}")
@@ -315,7 +350,7 @@ class Lobby:
         self._install_callbacks()
         self._load_friends_list()
 
-        # 冷启动 join：如果通过 Steam 启动并带有 connect
+        # 冷启动 join：通过 Steam 启动并带 connect 时
         try:
             val = ISteamApps_GetLaunchQueryParam(self.apps, b"connect")
             if val:
@@ -353,31 +388,29 @@ class Lobby:
             return vtbl, base
 
         def on_lobby_created(ev: LobbyCreated_t):
+            dbg(f"on_lobby_created: result={ev.m_eResult}, lobby={ev.m_ulSteamIDLobby}")
             if ev.m_eResult == 1:  # k_EResultOK
                 self.lobby_id = ev.m_ulSteamIDLobby
                 self._set_status(f"已创建Lobby：{self.lobby_id}，等待进入...")
             else:
                 self._set_status(f"创建失败，EResult={ev.m_eResult}")
-            dbg(f"on_lobby_created: result={ev.m_eResult}, lobby={ev.m_ulSteamIDLobby}")
 
         def on_lobby_enter(ev: LobbyEnter_t):
             self.lobby_id = ev.m_ulSteamIDLobby
+            dbg(f"on_lobby_enter: lobby={ev.m_ulSteamIDLobby}, locked={ev.m_bLocked}, enter_resp={ev.m_EChatRoomEnterResponse}")
             self._set_status(f"已进入Lobby：{self.lobby_id}")
             self._after_enter_lobby()
             self._refresh_member_names()
+
             ok_joinable = ISteamMatchmaking_SetLobbyJoinable(self.mm, self.lobby_id, True)
             dbg(f"SetLobbyJoinable(true) -> {ok_joinable}")
 
-            # 让好友“最近的大厅/同游戏好友列表”更容易发现
             ISteamMatchmaking_SetLobbyData(self.mm, self.lobby_id, b"name", self.my_name.encode("utf-8"))
             ISteamMatchmaking_SetLobbyData(self.mm, self.lobby_id, b"ver", b"1")
             ISteamMatchmaking_SetLobbyData(self.mm, self.lobby_id, b"mode", b"poker")
 
-            # 写入成员名，给非好友也能看到
             ISteamMatchmaking_SetLobbyMemberData(self.mm, self.lobby_id, b"player_name", self.my_name.encode("utf-8"))
             dbg("Lobby data & member data set")
-
-            dbg(f"on_lobby_enter: lobby={ev.m_ulSteamIDLobby}, locked={ev.m_bLocked}, enter_resp={ev.m_EChatRoomEnterResponse}")
 
         def on_lobby_chat_update(ev: LobbyChatUpdate_t):
             if ev.m_ulSteamIDLobby == self.lobby_id:
@@ -390,22 +423,18 @@ class Lobby:
             dbg(f"on_lobby_data_update: lobby={ev.m_ulSteamIDLobby}, member={ev.m_ulSteamIDMember}, success={ev.m_bSuccess}")
 
         def on_lobby_invite(ev: LobbyInvite_t):
-            # 收到别人邀请你 -> 自动加入（也可弹确认UI）
+            dbg(f"on_lobby_invite: from={ev.m_ulSteamIDUser}, lobby={ev.m_ulSteamIDLobby}, gameid={ev.m_ulGameID}")
             ISteamMatchmaking_JoinLobby(self.mm, c_uint64(ev.m_ulSteamIDLobby))
             self._set_status(f"收到邀请，正在加入Lobby {ev.m_ulSteamIDLobby} ...")
-            dbg(f"on_lobby_invite: from={ev.m_ulSteamIDUser}, lobby={ev.m_ulSteamIDLobby}, gameid={ev.m_ulGameID}")
 
         def on_game_lobby_join_requested(ev: GameLobbyJoinRequested_t):
-            # 别人在好友列表右键“加入游戏” -> 你将被请求进入该Lobby
+            dbg(f"on_game_lobby_join_requested: friend={ev.m_steamIDFriend}, lobby={ev.m_steamIDLobby}")
             ISteamMatchmaking_JoinLobby(self.mm, c_uint64(ev.m_steamIDLobby))
             self._set_status(f"好友请求加入，进入Lobby {ev.m_steamIDLobby} ...")
-            dbg(f"on_game_lobby_join_requested: friend={ev.m_steamIDFriend}, lobby={ev.m_steamIDLobby}")
 
         def on_game_rich_presence_join_requested(ev: GameRichPresenceJoinRequested_t):
             connect = bytes(ev.m_rgchConnect).split(b'\x00', 1)[0].decode('utf-8', 'ignore')
             dbg(f"on_game_rich_presence_join_requested: friend={ev.m_steamIDFriend}, connect='{connect}'")
-            # 你在 _after_enter_lobby() 里把 connect 设置成了 lobby_id 的纯数字字符串
-            # 如果你以后改成 "lobby:<id>" 或 "connect=<id>"，这里顺便 parse 一下
             s = connect.strip()
             for prefix in ("lobby:", "connect=", "steam://joinlobby/"):
                 if s.startswith(prefix):
@@ -435,9 +464,28 @@ class Lobby:
             (GameRichPresenceJoinRequested_t, on_game_rich_presence_join_requested, CBID_GameRichPresenceJoinRequested),
             (GameOverlayActivated_t, on_overlay, CBID_GameOverlayActivated),
         ]:
-            vtbl, base = _mk_vtable(cls_, func, cbid)
+            vtbl, base = self._mk_vtable(cls_, func, cbid)
             self._cb_keep.append((vtbl, base))
             SteamAPI_RegisterCallback(ctypes.byref(base), cbid)
+
+    @staticmethod
+    def _mk_vtable(cb_struct_cls, handler, cb_id):
+        def _run(this, pvParam):
+            data = cb_struct_cls.from_address(pvParam)
+            handler(data)
+
+        def _runargs(this, pvParam, bIOFailure, hSteamAPICall):
+            data = cb_struct_cls.from_address(pvParam)
+            handler(data)
+
+        def _getsize():
+            return ctypes.sizeof(cb_struct_cls)
+
+        vtbl = _CallbackVTable(CALLBACK_RUN(_run), CALLBACK_RUNARGS(_runargs), CALLBACK_GETSIZE(_getsize))
+        base = _CallbackBase()
+        base.vtable = ctypes.addressof(vtbl)
+        base.m_iCallback = cb_id
+        return vtbl, base
 
     def _uninstall_callbacks(self):
         for vtbl, base in getattr(self, "_cb_keep", []):
@@ -478,11 +526,9 @@ class Lobby:
         names = []
         for i in range(int(count)):
             sid = ISteamMatchmaking_GetLobbyMemberByIndex(self.mm, self.lobby_id, i)
-            # 优先用 Friends API 取昵称（大多可用）
             pname = ISteamFriends_GetFriendPersonaName(self.friends, sid)
             display = (pname or b"").decode("utf-8", "ignore").strip()
             if not display:
-                # 退化到 Lobby Member Data 的 "player_name"
                 p = ISteamMatchmaking_GetLobbyMemberData(self.mm, self.lobby_id, sid, b"player_name")
                 display = (p or b"Unknown").decode("utf-8", "ignore")
             names.append(display)
@@ -515,8 +561,11 @@ class Lobby:
         idx = self.friends_list.item_list.index(sel)
         fid = self._friend_ids[idx]
         info = FriendGameInfo_t()
-        if ISteamFriends_GetFriendGamePlayed(self.friends, fid, ctypes.byref(info)):
+        ok = ISteamFriends_GetFriendGamePlayed(self.friends, fid, ctypes.byref(info))
+        dbg(f"join_selected_friend_lobby: pick_idx={idx}, friend_id={fid}, GetFriendGamePlayed ok={ok}")
+        if ok:
             lobby = info.m_steamIDLobby
+            dbg(f"friend lobby={lobby}, gameid={info.m_gameID}")
             if lobby:
                 ISteamMatchmaking_JoinLobby(self.mm, c_uint64(lobby))
                 self._set_status(f"跟随加入好友的Lobby {lobby} ...")
@@ -524,9 +573,6 @@ class Lobby:
                 self._set_status("该好友当前不在可加入的Lobby")
         else:
             self._set_status("该好友未在游戏中或不可加入")
-        dbg(f"join_selected_friend_lobby: pick_idx={idx}, friend_id={fid}")
-        ok = ISteamFriends_GetFriendGamePlayed(self.friends, fid, ctypes.byref(info))
-        dbg(f"GetFriendGamePlayed ok={ok}, lobby={info.m_steamIDLobby}, gameid={info.m_gameID}")
 
     def leave_lobby(self):
         if self.lobby_id:
@@ -561,8 +607,8 @@ class Lobby:
         self.screen.fill((245, 245, 245))
         dt = self.clock.tick(60) / 1000.0
 
-        # 一定要跑回调
-        SteamAPI_RunCallbacks()
+        # 统一跑回调（或在 main 里跑也可以，二选一）
+        steam.run_callbacks()
 
         self.manager.update(dt)
         self.manager.draw_ui(self.screen)
@@ -573,9 +619,8 @@ class Lobby:
             while self.running:
                 nxt = self.handle_events()
                 if nxt:
-                    return nxt
+                    return nxt, None
                 self.draw()
         finally:
             self._uninstall_callbacks()
-            SteamAPI_Shutdown()
-        return "STATE_QUIT"
+        return "STATE_QUIT", None

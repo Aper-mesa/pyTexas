@@ -1,21 +1,24 @@
 import os
+import sys
 
 import i18n
 import pygame
-import sys
-
-import tools
-from Login import Login
-from Lobby import Lobby
-from round import Room, PlayScreen
 import pygame_gui as gui
+
+import steam_bootstrap as steam
+import tools
+from Lobby import Lobby
+from Login import Login
+from round import Room, PlayScreen
 
 
 def main():
     running_dir = tools.resource_path('.')
     os.chdir(running_dir)
+    steam.init()
 
     pygame.mixer.pre_init(44100, -16, 2, 512)
+    os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"  # 0=最近邻(默认), 1=线性, 2=best
     pygame.init()
     pygame.display.set_caption("pyTexas 0.5.10.9.1")
 
@@ -32,9 +35,10 @@ def main():
     i18n.set('locale', 'zh')
     i18n.set('fallback', 'en')
 
-    screen_width = 800
-    screen_height = 600
-    screen = pygame.display.set_mode((screen_width, screen_height))
+    screen_width = 1200
+    screen_height = 900
+    flags = pygame.SCALED
+    screen = pygame.display.set_mode((screen_width, screen_height), flags)
 
     current_state = "STATE_LOGIN"
 
@@ -46,6 +50,7 @@ def main():
                             translation_directory_paths=[tools.resource_path('languages')])
 
     while True:
+        steam.run_callbacks()
         if current_state == "STATE_LOGIN":
             login = Login(screen, manager)
             loginInstance = login

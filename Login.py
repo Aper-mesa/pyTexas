@@ -1,140 +1,132 @@
-import ctypes
-import os
-from ctypes import c_bool, c_void_p, c_char_p, c_uint64, c_int32
-from pathlib import Path
-
+# -*- coding: utf-8 -*-
 import pygame as g
 import pygame_gui as gui
-
+import ctypes
+from ctypes import c_uint64, c_char_p
 import player
+import steam_bootstrap as steam  # ← 全局初始化在 main 里做过
 
-os.environ["SDL_IME_SHOW_UI"] = "1"
+os_env_set = False
+try:
+    import os
+    os.environ["SDL_IME_SHOW_UI"] = "1"
+    os_env_set = True
+except Exception:
+    pass
 
-def _load_steam_identity():
-    lib = ctypes.WinDLL(str(Path(__file__).resolve().parent / "steam_api64.dll"))
 
-    SteamAPI_Init = getattr(lib, "SteamAPI_InitSafe", None) or lib.SteamAPI_Init
-    SteamAPI_Init.restype = c_bool
+# 绑定我们只需要的两个函数（使用 steam_bootstrap.DLL）
+_DLL = None
 
-    SteamAPI_Shutdown = lib.SteamAPI_Shutdown
-    SteamAPI_Shutdown.restype = None
 
-    SteamInternal_CreateInterface = lib.SteamInternal_CreateInterface
-    SteamInternal_CreateInterface.restype = c_void_p
-    SteamInternal_CreateInterface.argtypes = [c_char_p]
+def _bind_steam_funcs():
+    global _DLL, ISteamUser_GetSteamID, ISteamFriends_GetPersonaName
+    if _DLL is not None:
+        return
+    _DLL = steam.DLL
+    if _DLL is None:
+        raise RuntimeError("Steam 未初始化。请确保在 main.py 中调用 steam.init()。")
 
-    SteamAPI_GetHSteamUser = lib.SteamAPI_GetHSteamUser
-    SteamAPI_GetHSteamUser.restype = c_int32
-    SteamAPI_GetHSteamPipe = lib.SteamAPI_GetHSteamPipe
-    SteamAPI_GetHSteamPipe.restype = c_int32
-
-    # 通过 SteamClient 拿到子接口
-    GetISteamUser = lib.SteamAPI_ISteamClient_GetISteamUser
-    GetISteamUser.restype = c_void_p
-    GetISteamUser.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
-
-    GetISteamFriends = lib.SteamAPI_ISteamClient_GetISteamFriends
-    GetISteamFriends.restype = c_void_p
-    GetISteamFriends.argtypes = [c_void_p, c_int32, c_int32, c_char_p]
-
-    # 具体方法
-    ISteamUser_GetSteamID = lib.SteamAPI_ISteamUser_GetSteamID
+    ISteamUser_GetSteamID = _DLL.SteamAPI_ISteamUser_GetSteamID
     ISteamUser_GetSteamID.restype = c_uint64
-    ISteamUser_GetSteamID.argtypes = [c_void_p]
+    ISteamUser_GetSteamID.argtypes = [ctypes.c_void_p]
 
-    ISteamFriends_GetPersonaName = lib.SteamAPI_ISteamFriends_GetPersonaName
+    ISteamFriends_GetPersonaName = _DLL.SteamAPI_ISteamFriends_GetPersonaName
     ISteamFriends_GetPersonaName.restype = c_char_p
-    ISteamFriends_GetPersonaName.argtypes = [c_void_p]
+    ISteamFriends_GetPersonaName.argtypes = [ctypes.c_void_p]
 
-    SteamAPI_Init()
-
-    try:
-        steam_client = c_void_p(SteamInternal_CreateInterface(b"SteamClient023"))
-
-        hUser = SteamAPI_GetHSteamUser()
-        hPipe = SteamAPI_GetHSteamPipe()
-
-        user = GetISteamUser(steam_client, hUser, hPipe, b"SteamUser021")
-        friends = GetISteamFriends(steam_client, hUser, hPipe, b"SteamFriends015")
-
-        steam_id = ISteamUser_GetSteamID(user)
-        persona = ISteamFriends_GetPersonaName(friends) or b"Unknown"
-        persona_name = persona.decode("utf-8", "ignore")
-        return str(steam_id), persona_name
-    finally:
-        SteamAPI_Shutdown()
 
 class Login:
+    """简化版 Steam 登录界面，只显示 Steam 用户名并进入大厅"""
+
     def __init__(self, screen, manager):
+        _bind_steam_funcs()
+
+        # Steam handles （由 steam_bootstrap.init() 提供）
+        user, friends, mm, apps, utils = steam.get_handles()
+
+        # Pygame GUI 初始化
         self.screen = screen
+        self.manager = manager
         self.clock = g.time.Clock()
         self.running = True
         self.currentPlayer = None
 
-        self.manager = manager
-
         w, h = self.screen.get_size()
-        center_x = w // 2
+        cx = w // 2
 
         self.title_label = gui.elements.UILabel(
-            relative_rect=g.Rect(center_x - 120, 60, 240, 40),
-            text='login_title',
-            manager=self.manager
+            relative_rect=g.Rect(cx - 100, 60, 200, 40),
+            text="登录到 Steam",
+            manager=self.manager,
         )
 
         self.confirm_button = gui.elements.UIButton(
-            relative_rect=g.Rect(center_x - 60, 270, 120, 44),
-            text='enter_lobby',
-            manager=self.manager
+            relative_rect=g.Rect(cx - 60, 260, 120, 40),
+            text="进入大厅",
+            manager=self.manager,
         )
 
         self.language_button = gui.elements.UIButton(
-            relative_rect=g.Rect(0, 0, 70, 35),
+            relative_rect=g.Rect(10, 10, 90, 35),
             text="英语",
-            manager=self.manager
+            manager=self.manager,
         )
 
         self.info_label = gui.elements.UILabel(
-            relative_rect=g.Rect(center_x - 180, 330, 360, 28),
-            text='',
-            manager=self.manager
+            relative_rect=g.Rect(cx - 180, 320, 360, 28),
+            text="正在获取 Steam 用户信息...",
+            manager=self.manager,
         )
 
-        self.currentPlayer = None
-        sid, name = _load_steam_identity()
+        # 获取当前 Steam 用户
+        sid = ISteamUser_GetSteamID(user)
+        name = (ISteamFriends_GetPersonaName(friends) or b"Unknown").decode("utf-8", "ignore")
+
+        # 创建 Player 实例
         self.currentPlayer = player.Player.create(sid, name)
         self.info_label.set_text(f"{name} (SteamID: {sid})")
 
+    # ----------------------------------------
+    # 事件逻辑
+    # ----------------------------------------
     def handle_events(self):
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
                 return "STATE_QUIT"
 
-            if event.type == g.KEYDOWN and event.key == g.K_RETURN:
-                return 'STATE_LOBBY'
-
             self.manager.process_events(event)
+
+            if event.type == g.KEYDOWN and event.key == g.K_RETURN:
+                return "STATE_LOBBY"
 
             if event.type == gui.UI_BUTTON_PRESSED:
                 if event.ui_element == self.confirm_button:
-                    return 'STATE_LOBBY'
+                    return "STATE_LOBBY"
                 elif event.ui_element == self.language_button:
-                    if self.manager.get_locale() == 'zh':
-                        self.manager.set_locale('en')
-                        self.language_button.set_text('Chinese')
+                    if self.manager.get_locale() == "zh":
+                        self.manager.set_locale("en")
+                        self.language_button.set_text("Chinese")
                     else:
-                        self.manager.set_locale('zh')
-                        self.language_button.set_text('英语')
+                        self.manager.set_locale("zh")
+                        self.language_button.set_text("英语")
+
         return None
 
+    # ----------------------------------------
+    # 绘制逻辑
+    # ----------------------------------------
     def draw(self):
         self.screen.fill((255, 255, 255))
-        time_delta = self.clock.tick(60) / 1000.0
-        self.manager.update(time_delta)
+        dt = self.clock.tick(60) / 1000.0
+        self.manager.update(dt)
         self.manager.draw_ui(self.screen)
         g.display.flip()
 
+    # ----------------------------------------
+    # 主循环
+    # ----------------------------------------
     def run(self):
         while self.running:
             next_state = self.handle_events()
