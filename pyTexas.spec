@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('languages', 'languages'), ('themes', 'themes'), ('sounds', 'sounds')],
+    datas=[('languages', 'languages'), ('themes', 'themes'), ('sounds', 'sounds'), ('steam_api64.dll', '.'), ('steam_appid.txt', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
