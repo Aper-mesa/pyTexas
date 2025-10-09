@@ -587,7 +587,7 @@ class Lobby:
                 try:
                     s = raw.decode("utf-8", "ignore")
                     name, steam_id, money = s.split(",", 3)
-                    p = player.Player.create(steam_id=str(steam_id), persona_name=name)
+                    p = player.Player.create(steam_id=str(steam_id), username=name)
                     p.money = int(money)
                 except Exception:
                     p = player.Player.create(steam_id=str(sid), persona_name=str(sid))
