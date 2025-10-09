@@ -613,6 +613,8 @@ class Lobby:
 
     # ---------- Loop ----------
     def handle_events(self):
+        steam.run_callbacks()
+
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
