@@ -42,11 +42,3 @@ class Player:
 
     def getOnlineData(self):
         return ",".join([self.username, self.steam_id, str(self.money)])
-
-class PlayerInGame:
-    def __init__(self, username, money, steam_id=None):
-        self.username = username
-        self.steam_id = str(steam_id) if steam_id is not None else None
-
-        self.money = money
-        self.handCards = []

@@ -335,6 +335,39 @@ class Lobby:
             manager=self.manager,
         )
 
+        # ===== Host controls (bottom centered) =====
+        self.is_host = False  # 进入/创建大厅后再置位
+        self.minBet = 1
+        self.initBet = 50
+
+        bottom_y = self.screen.get_height() - 56
+        group_w = 480
+        group_x = (self.screen.get_width() - group_w) // 2
+
+        self.ui_minbet = gui.elements.UITextEntryLine(
+            relative_rect=g.Rect(group_x, bottom_y, 120, 36),
+            manager=self.manager,
+            placeholder_text="minBet"
+        )
+        self.ui_minbet.set_text(str(self.minBet))
+
+        self.ui_initbet = gui.elements.UITextEntryLine(
+            relative_rect=g.Rect(group_x + 140, bottom_y, 120, 36),
+            manager=self.manager,
+            placeholder_text="initBet"
+        )
+        self.ui_initbet.set_text(str(self.initBet))
+
+        self.ui_start_btn = gui.elements.UIButton(
+            relative_rect=g.Rect(group_x + 280, bottom_y, 200, 36),
+            text="开始游戏",
+            manager=self.manager
+        )
+
+        # 初始隐藏（只有房主显示）
+        for el in (self.ui_minbet, self.ui_initbet, self.ui_start_btn):
+            el.hide()
+
         # 初始时未在大厅，禁用邀请按钮
         self.invite_btn.disable()
 
@@ -428,6 +461,13 @@ class Lobby:
                 self.lobby_id = ev.m_ulSteamIDLobby
                 self.invite_btn.enable()
                 self._set_status(f"已创建Lobby：{self.lobby_id}，等待进入...")
+                # 创建成功视为房主
+                self.is_host = True
+                for el in (self.ui_minbet, self.ui_initbet, self.ui_start_btn):
+                    el.show()
+
+                # 把自己资料写到 Lobby 成员数据，供别人读取
+                self._push_my_member_data()
             else:
                 self._set_status(f"创建失败，EResult={ev.m_eResult}")
 
@@ -435,6 +475,19 @@ class Lobby:
             self.lobby_id = ev.m_ulSteamIDLobby
             dbg(f"on_lobby_enter: lobby={ev.m_ulSteamIDLobby}, locked={ev.m_bLocked}, enter_resp={ev.m_EChatRoomEnterResponse}")
             self._set_status(f"已进入Lobby：{self.lobby_id}")
+
+            # 不是创建路径进入，则不是房主
+            if not getattr(self, "is_host", False):
+                self.is_host = False
+                for el in (self.ui_minbet, self.ui_initbet, self.ui_start_btn):
+                    el.hide()
+
+            # 进入后同样写一次自己的成员数据（昵称/ID/金钱）
+            self._push_my_member_data()
+
+            # 刷新成员列表（可选）
+            self._refresh_members_list()
+
             self._after_enter_lobby()
             self._refresh_member_names()
             self.invite_btn.enable()
@@ -457,6 +510,7 @@ class Lobby:
         def on_lobby_data_update(ev: LobbyDataUpdate_t):
             if ev.m_ulSteamIDLobby == self.lobby_id:
                 self._refresh_member_names()
+                self._refresh_members_list()
             dbg(f"on_lobby_data_update: lobby={ev.m_ulSteamIDLobby}, member={ev.m_ulSteamIDMember}, success={ev.m_bSuccess}")
 
         def on_lobby_invite(ev: LobbyInvite_t):
@@ -504,6 +558,53 @@ class Lobby:
             vtbl, base = self._mk_vtable(cls_, func, cbid)
             self._cb_keep.append((vtbl, base))
             SteamAPI_RegisterCallback(ctypes.byref(base), cbid)
+
+    def _push_my_member_data(self):
+        """把当前玩家资料写入 Lobby 成员数据，键 'player'，值 'username,steam_id,money'"""
+        if not getattr(self, "lobby_id", None):
+            return
+        # Player上若没有getOnlineData，就按下面格式拼
+        username = getattr(self.current_player, "username", getattr(self.current_player, "persona_name", ""))
+        steam_id = str(self.current_player.steam_id)
+        money = int(getattr(self.current_player, "money", 0))
+        payload = f"{username},{steam_id},{money}".encode("utf-8")
+        # 注意：这里使用你项目里已经绑定好的 matchmaking 句柄/函数名
+        ISteamMatchmaking_SetLobbyMemberData(self.mm, c_uint64(self.lobby_id), b"player", payload)
+
+    def _collect_players(self):
+        """读取 Lobby 全体成员为 Player 实例列表（用 Player.create / 或直接 new Player）"""
+        res = []
+        if not getattr(self, "lobby_id", None):
+            return res
+
+        count = ISteamMatchmaking_GetNumLobbyMembers(self.mm, c_uint64(self.lobby_id))
+        for i in range(count):
+            sid = ISteamMatchmaking_GetLobbyMemberByIndex(self.mm, c_uint64(self.lobby_id), i)
+            raw = ISteamMatchmaking_GetLobbyMemberData(self.mm, c_uint64(self.lobby_id), c_uint64(sid), b"player")
+
+            # 优先用成员数据；没有就兜底只用ID和默认钱
+            if raw:
+                try:
+                    s = raw.decode("utf-8", "ignore")
+                    name, steam_id, money = s.split(",", 3)
+                    p = player.Player.create(steam_id=str(steam_id), persona_name=name)
+                    p.money = int(money)
+                except Exception:
+                    p = player.Player.create(steam_id=str(sid), persona_name=str(sid))
+            else:
+                p = player.Player.create(steam_id=str(sid), persona_name=str(sid))
+
+            res.append(p)
+        return res
+
+    def _refresh_members_list(self):
+        """（可选）如果你有右侧列表，就按需刷新一下显示"""
+        try:
+            players = self._collect_players()
+            items = [f"{p.username} | {p.steam_id} | ¥{p.money}" for p in players]
+            self.members_list.set_item_list(items)
+        except Exception:
+            pass
 
     @staticmethod
     def _mk_vtable(cb_struct_cls, handler, cb_id):
@@ -629,6 +730,32 @@ class Lobby:
                     self.invite_friends_via_overlay()
                 elif event.ui_element == self.leave_btn:
                     self.leave_lobby()
+                elif event.ui_element == self.ui_start_btn:
+                    if not self.is_host:
+                        # 非房主点了也无效（不抛错，只忽略）
+                        return None
+
+                    # 读取输入（容错）
+                    try:
+                        self.minBet = int(self.ui_minbet.get_text().strip() or "1")
+                    except Exception:
+                        self.minBet = 1
+                        self.ui_minbet.set_text("1")
+
+                    try:
+                        self.initBet = int(self.ui_initbet.get_text().strip() or "50")
+                    except Exception:
+                        self.initBet = 50
+                        self.ui_initbet.set_text("50")
+
+                    # 收集玩家（Player 实例列表）
+                    players = self._collect_players()
+                    if not players:
+                        # 房间没人，直接不开始
+                        return None
+
+                    return "STATE_GAME", [players, self.minBet, self.initBet]
+
             if event.type == g.VIDEORESIZE:
                 # 只有尺寸真变了才 relayout，避免无谓刷新
                 new_w, new_h = event.w, event.h
