@@ -294,57 +294,52 @@ class Lobby:
 
         # ---------- UI ----------
         w, h = self.screen.get_size()
-        cx = w // 2
+        self._w, self._h = w, h  # 记录，供是否需要 relayout 判断
 
+        # 统一做一个布局函数
+        def _rel(v):  # 便捷百分比 -> 像素
+            return int(v)
+
+        def _pctx(p):
+            return int(self.screen.get_size()[0] * p)
+
+        def _pcty(p):
+            return int(self.screen.get_size()[1] * p)
+
+        # 先占位，具体 rect 在 _relayout() 里计算
         self.title_label = gui.elements.UILabel(
-            relative_rect=g.Rect(cx - 140, 24, 280, 36),
-            text="Lobby",
-            manager=self.manager,
+            relative_rect=g.Rect(0, 0, 0, 0), text="Lobby", manager=self.manager
         )
 
         self.create_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(cx - 240, 70, 160, 38),
-            text="创建公开大厅",
-            manager=self.manager,
+            relative_rect=g.Rect(0, 0, 0, 0), text="创建公开大厅", manager=self.manager
         )
 
         self.invite_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(cx - 60, 70, 160, 38),
-            text="邀请好友加入",
-            manager=self.manager,
+            relative_rect=g.Rect(0, 0, 0, 0), text="邀请好友加入", manager=self.manager
         )
 
         self.leave_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(cx + 120, 70, 120, 38),
-            text="离开大厅",
-            manager=self.manager,
+            relative_rect=g.Rect(0, 0, 0, 0), text="离开大厅", manager=self.manager
         )
 
-        # 左侧：好友列表 + 跟随加入
-        self.friends_list = gui.elements.UISelectionList(
-            relative_rect=g.Rect(30, 130, 260, 320),
-            item_list=[],
-            manager=self.manager,
-        )
-        self.join_friend_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(30, 460, 260, 30),
-            text="加入所选好友的房间",
-            manager=self.manager,
-        )
-
-        # 右侧：成员列表
+        # 右侧：成员列表（现在居中且更宽）
         self.members_list = gui.elements.UISelectionList(
-            relative_rect=g.Rect(cx - 120, 130, 520, 360),
-            item_list=[],
-            manager=self.manager,
+            relative_rect=g.Rect(0, 0, 0, 0), item_list=[], manager=self.manager
         )
 
         # 状态栏
         self.status_label = gui.elements.UILabel(
-            relative_rect=g.Rect(cx - 260, 500, 520, 28),
+            relative_rect=g.Rect(0, 0, 0, 0),
             text=f"你好 {self.my_name} ({self.my_steamid})",
             manager=self.manager,
         )
+
+        # 初始时未在大厅，禁用邀请按钮
+        self.invite_btn.disable()
+
+        # 统一做一次布局
+        self._relayout()
 
         # 初始化
         self._install_callbacks()
@@ -366,6 +361,46 @@ class Lobby:
         except Exception as e:
             dbg(f"parse launch connect failed: {e}")
         dbg(f"overlay enabled? {bool(ISteamUtils_IsOverlayEnabled(self.utils))}")
+
+    def _relayout(self):
+        w, h = self.screen.get_size()
+        cx = w // 2
+
+        # 尺寸参数（可按喜好微调）
+        title_w, title_h = int(w * 0.23), int(h * 0.05)
+        btn_w, btn_h = int(w * 0.14), int(h * 0.05)
+        gap = int(w * 0.015)
+
+        # 顶部标题
+        self.title_label.set_relative_position((cx - title_w // 2, int(h * 0.03)))
+        self.title_label.set_dimensions((title_w, title_h))
+
+        # 顶部三按钮水平排布
+        total_w = btn_w * 3 + gap * 2
+        btn_y = int(h * 0.10)
+        start_x = cx - total_w // 2
+        self.create_btn.set_relative_position((start_x, btn_y))
+        self.create_btn.set_dimensions((btn_w, btn_h))
+
+        self.invite_btn.set_relative_position((start_x + btn_w + gap, btn_y))
+        self.invite_btn.set_dimensions((btn_w, btn_h))
+
+        self.leave_btn.set_relative_position((start_x + (btn_w + gap) * 2, btn_y))
+        self.leave_btn.set_dimensions((btn_w, btn_h))
+
+        # 成员列表居中，宽约 60% 屏幕，高约 60% 屏幕
+        list_w, list_h = int(w * 0.62), int(h * 0.60)
+        list_x = cx - list_w // 2
+        list_y = int(h * 0.18)
+        self.members_list.set_relative_position((list_x, list_y))
+        self.members_list.set_dimensions((list_w, list_h))
+
+        # 底部状态栏
+        status_w, status_h = int(w * 0.6), int(h * 0.04)
+        status_x = cx - status_w // 2
+        status_y = list_y + list_h + int(h * 0.02)
+        self.status_label.set_relative_position((status_x, status_y))
+        self.status_label.set_dimensions((status_w, status_h))
 
     # ---------- Steam Callbacks ----------
     def _install_callbacks(self):
@@ -391,6 +426,7 @@ class Lobby:
             dbg(f"on_lobby_created: result={ev.m_eResult}, lobby={ev.m_ulSteamIDLobby}")
             if ev.m_eResult == 1:  # k_EResultOK
                 self.lobby_id = ev.m_ulSteamIDLobby
+                self.invite_btn.enable()
                 self._set_status(f"已创建Lobby：{self.lobby_id}，等待进入...")
             else:
                 self._set_status(f"创建失败，EResult={ev.m_eResult}")
@@ -401,6 +437,7 @@ class Lobby:
             self._set_status(f"已进入Lobby：{self.lobby_id}")
             self._after_enter_lobby()
             self._refresh_member_names()
+            self.invite_btn.enable()
 
             ok_joinable = ISteamMatchmaking_SetLobbyJoinable(self.mm, self.lobby_id, True)
             dbg(f"SetLobbyJoinable(true) -> {ok_joinable}")
@@ -523,7 +560,6 @@ class Lobby:
             items.append(display)
             ids.append(fid)
         self._friend_ids = ids
-        self.friends_list.set_item_list(items)
 
     def _refresh_member_names(self):
         if not self.lobby_id:
@@ -566,30 +602,10 @@ class Lobby:
         ISteamFriends_ActivateGameOverlayInviteDialog(self.friends, c_uint64(self.lobby_id))
         self._set_status("已打开Steam邀请弹窗")
 
-    def join_selected_friend_lobby(self):
-        sel = self.friends_list.get_single_selection()
-        if sel is None:
-            self._set_status("先从好友列表选择一个好友")
-            return
-        idx = self.friends_list.item_list.index(sel)
-        fid = self._friend_ids[idx]
-        info = FriendGameInfo_t()
-        ok = ISteamFriends_GetFriendGamePlayed(self.friends, fid, ctypes.byref(info))
-        dbg(f"join_selected_friend_lobby: pick_idx={idx}, friend_id={fid}, GetFriendGamePlayed ok={ok}")
-        if ok:
-            lobby = info.m_steamIDLobby
-            dbg(f"friend lobby={lobby}, gameid={info.m_gameID}")
-            if lobby:
-                ISteamMatchmaking_JoinLobby(self.mm, c_uint64(lobby))
-                self._set_status(f"跟随加入好友的Lobby {lobby} ...")
-            else:
-                self._set_status("该好友当前不在可加入的Lobby")
-        else:
-            self._set_status("该好友未在游戏中或不可加入")
-
     def leave_lobby(self):
         if self.lobby_id:
             ISteamMatchmaking_LeaveLobby(self.mm, self.lobby_id)
+            self.invite_btn.disable()
             self._after_leave_lobby()
             self._set_status("已离开Lobby")
             self.lobby_id = 0
@@ -609,10 +625,14 @@ class Lobby:
                     self.create_public_lobby()
                 elif event.ui_element == self.invite_btn:
                     self.invite_friends_via_overlay()
-                elif event.ui_element == self.join_friend_btn:
-                    self.join_selected_friend_lobby()
                 elif event.ui_element == self.leave_btn:
                     self.leave_lobby()
+            if event.type == g.VIDEORESIZE:
+                # 只有尺寸真变了才 relayout，避免无谓刷新
+                new_w, new_h = event.w, event.h
+                if (new_w, new_h) != (self._w, self._h):
+                    self._w, self._h = new_w, new_h
+                    self._relayout()
 
         return None
 
