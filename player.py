@@ -8,6 +8,7 @@ class Player:
         self.steam_id = str(steam_id)
         self.username = username
         self.money = money
+        self.handCards = []
 
     def storeData(self):
         tools.createPathIfNotExist(config.USER_DATA_PATH)

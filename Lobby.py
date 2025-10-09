@@ -273,7 +273,6 @@ class Lobby:
         # Steam 句柄
         self.user, self.friends, self.mm, self.apps, self.utils = steam.get_handles()
 
-        self._overlay_lock = False
         self.screen = screen
         self.clock = g.time.Clock()
         self.manager = manager
@@ -340,23 +339,23 @@ class Lobby:
         self.minBet = 1
         self.initBet = 50
 
-        bottom_y = self.screen.get_height() - 56
+        bottom_y = self.screen.get_height() - 120
         group_w = 480
         group_x = (self.screen.get_width() - group_w) // 2
 
-        self.ui_minbet = gui.elements.UITextEntryLine(
+        self.ui_min_bet = gui.elements.UITextEntryLine(
             relative_rect=g.Rect(group_x, bottom_y, 120, 36),
             manager=self.manager,
             placeholder_text="minBet"
         )
-        self.ui_minbet.set_text(str(self.minBet))
+        self.ui_min_bet.set_text(str(self.minBet))
 
-        self.ui_initbet = gui.elements.UITextEntryLine(
+        self.ui_init_bet = gui.elements.UITextEntryLine(
             relative_rect=g.Rect(group_x + 140, bottom_y, 120, 36),
             manager=self.manager,
             placeholder_text="initBet"
         )
-        self.ui_initbet.set_text(str(self.initBet))
+        self.ui_init_bet.set_text(str(self.initBet))
 
         self.ui_start_btn = gui.elements.UIButton(
             relative_rect=g.Rect(group_x + 280, bottom_y, 200, 36),
@@ -365,11 +364,13 @@ class Lobby:
         )
 
         # 初始隐藏（只有房主显示）
-        for el in (self.ui_minbet, self.ui_initbet, self.ui_start_btn):
+        for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
             el.hide()
 
         # 初始时未在大厅，禁用邀请按钮
         self.invite_btn.disable()
+
+        self.leave_btn.disable()
 
         # 统一做一次布局
         self._relayout()
@@ -463,8 +464,10 @@ class Lobby:
                 self._set_status(f"已创建Lobby：{self.lobby_id}，等待进入...")
                 # 创建成功视为房主
                 self.is_host = True
-                for el in (self.ui_minbet, self.ui_initbet, self.ui_start_btn):
+                self.create_btn.disable()
+                for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
                     el.show()
+                    el.enable()
 
                 # 把自己资料写到 Lobby 成员数据，供别人读取
                 self._push_my_member_data()
@@ -475,11 +478,12 @@ class Lobby:
             self.lobby_id = ev.m_ulSteamIDLobby
             dbg(f"on_lobby_enter: lobby={ev.m_ulSteamIDLobby}, locked={ev.m_bLocked}, enter_resp={ev.m_EChatRoomEnterResponse}")
             self._set_status(f"已进入Lobby：{self.lobby_id}")
+            self.leave_btn.enable()
 
             # 不是创建路径进入，则不是房主
             if not getattr(self, "is_host", False):
                 self.is_host = False
-                for el in (self.ui_minbet, self.ui_initbet, self.ui_start_btn):
+                for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
                     el.hide()
 
             # 进入后同样写一次自己的成员数据（昵称/ID/金钱）
@@ -539,11 +543,6 @@ class Lobby:
                 dbg(f"RichPresence connect 无法解析为数字 lobby id: '{connect}'")
                 self._set_status("收到 Join 请求但 connect 无效")
 
-        def on_overlay(ev: GameOverlayActivated_t):
-            dbg(f"overlay active={ev.m_bActive}")
-            if ev.m_bActive == 0:
-                self._overlay_lock = False
-
         self._cb_keep = []
         for cls_, func, cbid in [
             (LobbyCreated_t, on_lobby_created, CBID_LobbyCreated),
@@ -553,7 +552,6 @@ class Lobby:
             (LobbyInvite_t, on_lobby_invite, CBID_LobbyInvite),
             (GameLobbyJoinRequested_t, on_game_lobby_join_requested, CBID_GameLobbyJoinRequested),
             (GameRichPresenceJoinRequested_t, on_game_rich_presence_join_requested, CBID_GameRichPresenceJoinRequested),
-            (GameOverlayActivated_t, on_overlay, CBID_GameOverlayActivated),
         ]:
             vtbl, base = self._mk_vtable(cls_, func, cbid)
             self._cb_keep.append((vtbl, base))
@@ -696,9 +694,6 @@ class Lobby:
         if not self.lobby_id:
             self._set_status("请先创建或加入一个Lobby")
             return
-        if self._overlay_lock:
-            return
-        self._overlay_lock = True
         dbg(f"invite overlay open, lobby={self.lobby_id}")
         ISteamFriends_ActivateGameOverlayInviteDialog(self.friends, c_uint64(self.lobby_id))
         self._set_status("已打开Steam邀请弹窗")
@@ -707,6 +702,13 @@ class Lobby:
         if self.lobby_id:
             ISteamMatchmaking_LeaveLobby(self.mm, self.lobby_id)
             self.invite_btn.disable()
+            self.is_host = False
+            controls = (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn)
+            self.create_btn.enable()
+            self.leave_btn.disable()
+            for el in controls:
+                el.disable()
+                el.hide()  # 如果你只想“禁用但不隐藏”，把这一行删掉即可
             self._after_leave_lobby()
             self._set_status("已离开Lobby")
             self.lobby_id = 0
@@ -719,7 +721,7 @@ class Lobby:
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
-                return "STATE_QUIT"
+                return "STATE_QUIT", None
 
             self.manager.process_events(event)
 
@@ -733,26 +735,26 @@ class Lobby:
                 elif event.ui_element == self.ui_start_btn:
                     if not self.is_host:
                         # 非房主点了也无效（不抛错，只忽略）
-                        return None
+                        return None, None
 
                     # 读取输入（容错）
                     try:
-                        self.minBet = int(self.ui_minbet.get_text().strip() or "1")
+                        self.minBet = int(self.ui_min_bet.get_text().strip() or "1")
                     except Exception:
                         self.minBet = 1
-                        self.ui_minbet.set_text("1")
+                        self.ui_min_bet.set_text("1")
 
                     try:
-                        self.initBet = int(self.ui_initbet.get_text().strip() or "50")
+                        self.initBet = int(self.ui_init_bet.get_text().strip() or "50")
                     except Exception:
                         self.initBet = 50
-                        self.ui_initbet.set_text("50")
+                        self.ui_init_bet.set_text("50")
 
                     # 收集玩家（Player 实例列表）
                     players = self._collect_players()
                     if not players:
                         # 房间没人，直接不开始
-                        return None
+                        return None, None
 
                     return "STATE_GAME", [players, self.minBet, self.initBet]
 
@@ -779,9 +781,12 @@ class Lobby:
     def run(self):
         try:
             while self.running:
-                nxt = self.handle_events()
-                if nxt:
-                    return nxt, None
+                steam.run_callbacks()
+                ret = self.handle_events()
+                if ret:
+                    next_state, data = ret
+                    if next_state == "STATE_GAME":
+                        return next_state, data
                 self.draw()
         finally:
             self._uninstall_callbacks()
