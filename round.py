@@ -263,7 +263,7 @@ class Room:
         for position in positions:
             if position in ("BB", "SB", "BTN"):
                 player = positions[position]
-                ip = player.ip
+                ip = player.steam_id
                 ret[ip] = position
         return ret
 
@@ -414,7 +414,7 @@ class PlayScreen:
             playerData.append({
                 "name": player.username,
                 "chips": player.money,
-                "ip": player.ip
+                "ip": player.steam_id
             })
 
         return playerData
