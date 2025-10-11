@@ -107,12 +107,12 @@ BOUNCE_DURATION = 0.5
 
 # --- 新增: 平滑过渡相关的变量 ---
 hover_intensity = 0.0  # 当前的悬停强度 (0.0 到 1.0)
-HOVER_TRANSITION_SPEED = 15.0  # 过渡速度 (值越大, 过渡越快)
+HOVER_TRANSITION_SPEED = 17.0  # 过渡速度 (值越大, 过渡越快)
 
 # 设置动画参数
-u_bounce_amplitude.value = 0.03  # 初始弹跳幅度 (放大20%)
-u_bounce_damping.value = 7.0  # 阻尼/衰减率 (值越大, 停得越快)
-u_bounce_frequency.value = 35.0  # 频率 (值越大, 弹得越快)
+u_bounce_amplitude.value = 0.05  # 初始弹跳幅度 (放大20%)
+u_bounce_damping.value = 15.0  # 阻尼/衰减率 (值越大, 停得越快)
+u_bounce_frequency.value = 40.0  # 频率 (值越大, 弹得越快)
 
 # 游戏主循环
 running = True
