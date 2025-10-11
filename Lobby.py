@@ -479,6 +479,7 @@ class Lobby:
             dbg(f"on_lobby_enter: lobby={ev.m_ulSteamIDLobby}, locked={ev.m_bLocked}, enter_resp={ev.m_EChatRoomEnterResponse}")
             self._set_status(f"已进入Lobby：{self.lobby_id}")
             self.leave_btn.enable()
+            self.create_btn.disable()
 
             # 不是创建路径进入，则不是房主
             if not getattr(self, "is_host", False):

@@ -20,17 +20,17 @@ def main():
     pygame.mixer.pre_init(44100, -16, 2, 512)
     os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"  # 0=最近邻(默认), 1=线性, 2=best
     pygame.init()
-    pygame.display.set_caption("pyTexas 0.5.10.9.1")
+    pygame.display.set_caption("pyTexas 0.5.10.11.1")
 
     try:
-        bgm_path = tools.resource_path(os.path.join('sounds', 'bgm.mp3'))
+        bgm_path = tools.resource_path(os.path.join('resources/sounds', 'bgm.mp3'))
         pygame.mixer.music.load(bgm_path)
         pygame.mixer.music.set_volume(0.5)  # 可调音量 0.0~1.0
         pygame.mixer.music.play(-1)  # -1 表示无限循环
     except Exception as e:
         print(f"WARNING: Failed to load/play BGM: {e}")
 
-    i18n.set('load_path', ['languages'])
+    i18n.set('load_path', ['resources/languages'])
     i18n.set('filename_format', 'lang.{locale}.{format}')
     i18n.set('locale', 'zh')
     i18n.set('fallback', 'en')
@@ -46,8 +46,8 @@ def main():
     data = None
 
     manager = gui.UIManager((screen.get_size()), starting_language='zh',
-                            theme_path=tools.resource_path('themes/theme.json'),
-                            translation_directory_paths=[tools.resource_path('languages')])
+                            theme_path=tools.resource_path('resources/themes/theme.json'),
+                            translation_directory_paths=[tools.resource_path('resources/languages')])
 
     while True:
         steam.run_callbacks()
