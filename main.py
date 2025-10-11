@@ -20,7 +20,7 @@ def main():
     pygame.mixer.pre_init(44100, -16, 2, 512)
     os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"  # 0=最近邻(默认), 1=线性, 2=best
     pygame.init()
-    pygame.display.set_caption("pyTexas 0.5.10.11.1")
+    pygame.display.set_caption("pyTexas")
 
     try:
         bgm_path = tools.resource_path(os.path.join('resources/sounds', 'bgm.mp3'))
