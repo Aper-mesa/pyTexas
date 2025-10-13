@@ -115,6 +115,7 @@ ISteamMatchmaking_GetNumLobbyMembers = None
 ISteamMatchmaking_GetLobbyMemberByIndex = None
 ISteamMatchmaking_GetLobbyMemberData = None
 ISteamMatchmaking_SetLobbyJoinable = None
+ISteamMatchmaking_GetLobbyData = None
 ISteamMatchmaking_SetLobbyData = None
 ISteamMatchmaking_SetLobbyMemberData = None
 SteamAPI_RegisterCallback = None
@@ -130,7 +131,7 @@ def _bind_steam_functions():
     global ISteamMatchmaking_CreateLobby, ISteamMatchmaking_JoinLobby, ISteamMatchmaking_LeaveLobby
     global ISteamMatchmaking_GetNumLobbyMembers, ISteamMatchmaking_GetLobbyMemberByIndex
     global ISteamMatchmaking_GetLobbyMemberData, ISteamMatchmaking_SetLobbyJoinable
-    global ISteamMatchmaking_SetLobbyData, ISteamMatchmaking_SetLobbyMemberData
+    global ISteamMatchmaking_SetLobbyData, ISteamMatchmaking_SetLobbyMemberData, ISteamMatchmaking_GetLobbyData
     global SteamAPI_RegisterCallback, SteamAPI_UnregisterCallback
 
     DLL = steam.DLL
