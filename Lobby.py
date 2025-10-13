@@ -521,12 +521,20 @@ class Lobby:
             self._refresh_member_names()
             self._refresh_members_list()
 
+            # 只处理当前 lobby
+            if ev.m_ulSteamIDLobby != self.lobby_id:
+                return
+
+            # 只有 Lobby 级变化才考虑 start（成员级更新直接忽略）
+            if ev.m_ulSteamIDMember not in (0, self.lobby_id):
+                return
+
             raw = ISteamMatchmaking_GetLobbyData(self.mm, c_uint64(self.lobby_id), b"start")
             s = (raw or b"").decode("utf-8", "ignore").strip()
 
             parts = s.split(",")
-            minBet = int(parts[0]);
-            initBet = int(parts[1]);
+            minBet = int(parts[0])
+            initBet = int(parts[1])
             ts = int(parts[2]) if len(parts) > 2 else 0
 
             if ts and ts == self._start_seen_ts:
