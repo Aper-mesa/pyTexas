@@ -532,15 +532,26 @@ class Lobby:
             raw = ISteamMatchmaking_GetLobbyData(self.mm, c_uint64(self.lobby_id), b"start")
             s = (raw or b"").decode("utf-8", "ignore").strip()
 
-            parts = s.split(",")
-            minBet = int(parts[0])
-            initBet = int(parts[1])
-            ts = int(parts[2]) if len(parts) > 2 else 0
-
-            if ts and ts == self._start_seen_ts:
+            # 如果 s 是空的，说明 "start" 数据还没被房主设置，直接忽略这次更新
+            if not s:
                 return
-            self._start_seen_ts = ts
-            self._start_payload = (minBet, initBet, ts)
+
+            try:
+                parts = s.split(",")
+                if len(parts) < 2:
+                    dbg(f"收到无效的 'start' 数据: {s}")
+                    return
+
+                minBet = int(parts[0])
+                initBet = int(parts[1])
+                ts = int(parts[2]) if len(parts) > 2 else 0
+
+                if ts and ts == self._start_seen_ts:
+                    return
+                self._start_seen_ts = ts
+                self._start_payload = (minBet, initBet, ts)
+            except (ValueError, IndexError) as e:
+                dbg(f"解析 'start' 数据 '{s}' 时出错: {e}")
 
         def on_lobby_invite(ev: LobbyInvite_t):
             dbg(f"on_lobby_invite: from={ev.m_ulSteamIDUser}, lobby={ev.m_ulSteamIDLobby}, gameid={ev.m_ulGameID}")
