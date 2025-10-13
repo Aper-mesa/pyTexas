@@ -237,6 +237,12 @@ def _bind_steam_functions():
     fn.argtypes = [c_void_p, c_uint64, c_bool]
     ISteamMatchmaking_SetLobbyJoinable = fn
 
+    # 绑定 —— 读取 Lobby 的某个 key
+    fn = DLL.SteamAPI_ISteamMatchmaking_GetLobbyData
+    fn.restype = c_char_p
+    fn.argtypes = [c_void_p, c_uint64, c_char_p]
+    ISteamMatchmaking_GetLobbyData = fn
+
     fn = DLL.SteamAPI_ISteamMatchmaking_SetLobbyData
     fn.restype = c_bool
     fn.argtypes = [c_void_p, c_uint64, c_char_p, c_char_p]
@@ -261,11 +267,6 @@ def _bind_steam_functions():
 
 # ================= GUI Lobby State =================
 class Lobby:
-    """
-    用法：
-        lobby = Lobby(screen, manager, current_player)
-        next_state, data = lobby.run()
-    """
     def __init__(self, screen, manager, current_player: player.Player, max_members: int = 9):
         # 绑定函数（确保 steam.init() 已先在 main 里调用）
         _bind_steam_functions()
@@ -290,6 +291,9 @@ class Lobby:
         self.lobby_id = 0
         self.member_names = []
         self._friend_ids = []
+
+        self._start_payload = None  # 保存开局参数（min/init 等）
+        self._start_seen_ts = 0  # 避免重复触发
 
         # ---------- UI ----------
         w, h = self.screen.get_size()
@@ -513,10 +517,21 @@ class Lobby:
             dbg(f"on_lobby_chat_update: lobby={ev.m_ulSteamIDLobby}, user_changed={ev.m_ulSteamIDUserChanged}, state_change={ev.m_rgfChatMemberStateChange}")
 
         def on_lobby_data_update(ev: LobbyDataUpdate_t):
-            if ev.m_ulSteamIDLobby == self.lobby_id:
-                self._refresh_member_names()
-                self._refresh_members_list()
-            dbg(f"on_lobby_data_update: lobby={ev.m_ulSteamIDLobby}, member={ev.m_ulSteamIDMember}, success={ev.m_bSuccess}")
+            self._refresh_member_names()
+            self._refresh_members_list()
+
+            raw = ISteamMatchmaking_GetLobbyData(self.mm, c_uint64(self.lobby_id), b"start")
+            s = (raw or b"").decode("utf-8", "ignore").strip()
+
+            parts = s.split(",")
+            minBet = int(parts[0]);
+            initBet = int(parts[1]);
+            ts = int(parts[2]) if len(parts) > 2 else 0
+
+            if ts and ts == self._start_seen_ts:
+                return
+            self._start_seen_ts = ts
+            self._start_payload = (minBet, initBet, ts)
 
         def on_lobby_invite(ev: LobbyInvite_t):
             dbg(f"on_lobby_invite: from={ev.m_ulSteamIDUser}, lobby={ev.m_ulSteamIDLobby}, gameid={ev.m_ulGameID}")
@@ -581,17 +596,10 @@ class Lobby:
             sid = ISteamMatchmaking_GetLobbyMemberByIndex(self.mm, c_uint64(self.lobby_id), i)
             raw = ISteamMatchmaking_GetLobbyMemberData(self.mm, c_uint64(self.lobby_id), c_uint64(sid), b"player")
 
-            # 优先用成员数据；没有就兜底只用ID和默认钱
-            if raw:
-                try:
-                    s = raw.decode("utf-8", "ignore")
-                    name, steam_id, money = s.split(",", 3)
-                    p = player.Player.create(steam_id=str(steam_id), username=name)
-                    p.money = int(money)
-                except Exception:
-                    p = player.Player.create(steam_id=str(sid), persona_name=str(sid))
-            else:
-                p = player.Player.create(steam_id=str(sid), persona_name=str(sid))
+            s = raw.decode("utf-8", "ignore")
+            name, steam_id, money = s.split(",", 3)
+            p = player.Player(steam_id, name, money)
+            p.money = int(money)
 
             res.append(p)
         return res
@@ -734,30 +742,19 @@ class Lobby:
                 elif event.ui_element == self.leave_btn:
                     self.leave_lobby()
                 elif event.ui_element == self.ui_start_btn:
-                    if not self.is_host:
-                        # 非房主点了也无效（不抛错，只忽略）
-                        return None, None
-
-                    # 读取输入（容错）
-                    try:
-                        self.minBet = int(self.ui_min_bet.get_text().strip() or "1")
-                    except Exception:
-                        self.minBet = 1
-                        self.ui_min_bet.set_text("1")
-
-                    try:
-                        self.initBet = int(self.ui_init_bet.get_text().strip() or "50")
-                    except Exception:
-                        self.initBet = 50
-                        self.ui_init_bet.set_text("50")
-
-                    # 收集玩家（Player 实例列表）
-                    players = self._collect_players()
-                    if not players:
-                        # 房间没人，直接不开始
-                        return None, None
-
-                    return "STATE_GAME", [players, self.minBet, self.initBet]
+                    self.minBet = int(self.ui_min_bet.get_text().strip())
+                    self.initBet = int(self.ui_init_bet.get_text().strip())
+                    # 1) 广播开局参数到 Lobby（JSON/简串都可，这里用简串）
+                    #    也可以加一个时间戳，便于去重
+                    ts = int(time.time())
+                    payload = f"{self.minBet},{self.initBet},{ts}".encode("utf-8")
+                    ISteamMatchmaking_SetLobbyData(self.mm, c_uint64(self.lobby_id), b"start", payload)
+                    # 2) 可选：禁止新玩家再加入
+                    ISteamMatchmaking_SetLobbyJoinable(self.mm, c_uint64(self.lobby_id), False)
+                    # 3) 本地也记下，确保房主自己同样走“统一路径”进游戏
+                    self._start_payload = (self.minBet, self.initBet, ts)
+                    # 不立刻 return，由 run() 主循环统一处理
+                    return None, None
 
             if event.type == g.VIDEORESIZE:
                 # 只有尺寸真变了才 relayout，避免无谓刷新
@@ -783,6 +780,12 @@ class Lobby:
         try:
             while self.running:
                 steam.run_callbacks()
+                # 统一检查：有没有收到“开始游戏”的标志
+                if self._start_payload:
+                    minBet, initBet, ts = self._start_payload
+                    players = self._collect_players()
+                    # 按你主程序的期望组织 data（示例先用原来的三项；若主程序需要更多，按你的 Room/PlayScreen 所需扩展）
+                    return "STATE_GAME", [players, minBet, initBet]
                 ret = self.handle_events()
                 if ret:
                     next_state, data = ret
