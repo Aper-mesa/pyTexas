@@ -65,8 +65,7 @@ def main():
                     _cleanup_scene(lobby, screen)
                     current_state = next_state
         elif current_state == 'STATE_GAME':
-            room = Room(screen, data)
-            game = PlayScreen(screen, manager, room, loginInstance.currentPlayer)
+            game = PlayScreen(screen, manager, data, loginInstance.currentPlayer)
             _cleanup_scene(game, screen)
             # current_state = next_state
         elif current_state == "STATE_QUIT":

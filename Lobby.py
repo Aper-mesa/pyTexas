@@ -4,9 +4,11 @@ import time
 from ctypes import c_bool, c_void_p, c_char_p, c_int32, c_uint64, c_uint32, c_uint8, c_uint16
 import pygame as g
 import pygame_gui as gui
+
+import net
 import player
 import steam_bootstrap as steam
-
+from round import Room
 
 def dbg(msg: str):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}")
@@ -123,7 +125,6 @@ SteamAPI_UnregisterCallback = None
 
 
 def _bind_steam_functions():
-    """在 __init__ 里调用。要求 steam_bootstrap.init() 已经完成。"""
     global ISteamUser_GetSteamID, ISteamFriends_GetPersonaName, ISteamFriends_GetFriendCount
     global ISteamFriends_GetFriendByIndex, ISteamFriends_GetFriendPersonaName
     global ISteamFriends_ActivateGameOverlayInviteDialog, ISteamFriends_SetRichPresence, ISteamFriends_ClearRichPresence
@@ -272,6 +273,23 @@ class Lobby:
         # 绑定函数（确保 steam.init() 已先在 main 里调用）
         _bind_steam_functions()
 
+        # ===== 新增：初始化网络消息收发器 =====
+        try:
+            self.messenger = net.create_messenger(steam)
+            dbg("[Lobby] Steam 网络消息系统初始化成功")
+
+            # 注册 Room 数据接收处理器（非房主用）
+            self.messenger.register_handler(
+                net.SteamNetworkMessenger.CHANNEL_ROOM_DATA,
+                self._on_room_received
+            )
+        except Exception as e:
+            dbg(f"[Lobby] 网络消息系统初始化失败: {e}")
+            self.messenger = None
+
+        # 用于存储接收到的 Room 对象
+        self._received_room = None
+
         # Steam 句柄
         self.user, self.friends, self.mm, self.apps, self.utils = steam.get_handles()
 
@@ -400,6 +418,21 @@ class Lobby:
         except Exception as e:
             dbg(f"parse launch connect failed: {e}")
         dbg(f"overlay enabled? {bool(ISteamUtils_IsOverlayEnabled(self.utils))}")
+
+    def _on_room_received(self, sender_steam_id, room_obj):
+        """处理接收到的 Room 对象（非房主回调）"""
+        dbg(f"[Lobby] 收到来自 {sender_steam_id} 的 Room 对象")
+
+        # 验证发送者是房主
+        if not self.lobby_id:
+            dbg("[Lobby] 未在 Lobby 中，忽略 Room 数据")
+            return
+
+        # 可选：验证发送者是房主
+        # 这里简化处理，直接接受
+        self._received_room = room_obj
+        self._set_status(f"收到游戏房间数据，准备开始...")
+        dbg("[Lobby] Room 对象已接收，等待进入游戏")
 
     def _relayout(self):
         w, h = self.screen.get_size()
@@ -747,6 +780,10 @@ class Lobby:
     def handle_events(self):
         steam.run_callbacks()
 
+        # ===== 新增：处理网络消息 =====
+        if self.messenger:
+            self.messenger.process_messages()
+
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
@@ -762,18 +799,54 @@ class Lobby:
                 elif event.ui_element == self.leave_btn:
                     self.leave_lobby()
                 elif event.ui_element == self.ui_start_btn:
+                    # ===== 修改：房主开始游戏逻辑 =====
                     self.minBet = int(self.ui_min_bet.get_text().strip())
                     self.initBet = int(self.ui_init_bet.get_text().strip())
-                    # 1) 广播开局参数到 Lobby（JSON/简串都可，这里用简串）
-                    #    也可以加一个时间戳，便于去重
+
+                    # 1) 创建 Room 对象
+                    players_list = self._collect_players()
+                    room = Room([players_list, self.minBet, self.initBet])
+
+                    # 2) 广播 Room 给所有成员（使用网络消息）
+                    if self.messenger:
+                        member_ids = []
+                        count = ISteamMatchmaking_GetNumLobbyMembers(
+                            self.mm, c_uint64(self.lobby_id)
+                        )
+                        for i in range(count):
+                            sid = ISteamMatchmaking_GetLobbyMemberByIndex(
+                                self.mm, c_uint64(self.lobby_id), i
+                            )
+                            if sid != self.my_steamid:  # 不发送给自己
+                                member_ids.append(sid)
+
+                        # 广播 Room 对象
+                        success_count = self.messenger.broadcast_to_lobby(
+                            member_ids,
+                            room,
+                            channel=net.SteamNetworkMessenger.CHANNEL_ROOM_DATA,
+                            reliable=True
+                        )
+                        dbg(f"[Lobby] Room 已广播给 {success_count}/{len(member_ids)} 个成员")
+
+                        # 给一点时间让消息发送出去
+                        time.sleep(0.2)
+
+                    # 3) 设置 Lobby 数据标记（兼容旧方式）
                     ts = int(time.time())
                     payload = f"{self.minBet},{self.initBet},{ts}".encode("utf-8")
-                    ISteamMatchmaking_SetLobbyData(self.mm, c_uint64(self.lobby_id), b"start", payload)
-                    # 2) 可选：禁止新玩家再加入
-                    ISteamMatchmaking_SetLobbyJoinable(self.mm, c_uint64(self.lobby_id), False)
-                    # 3) 本地也记下，确保房主自己同样走“统一路径”进游戏
+                    ISteamMatchmaking_SetLobbyData(
+                        self.mm, c_uint64(self.lobby_id), b"start", payload
+                    )
+                    ISteamMatchmaking_SetLobbyJoinable(
+                        self.mm, c_uint64(self.lobby_id), False
+                    )
+
+                    # 4) 房主自己也保存 Room 对象
+                    self._received_room = room
                     self._start_payload = (self.minBet, self.initBet, ts)
-                    # 不立刻 return，由 run() 主循环统一处理
+
+                    dbg("[Lobby] 房主已创建并广播 Room，准备进入游戏")
                     return None, None
 
             if event.type == g.VIDEORESIZE:
@@ -800,18 +873,65 @@ class Lobby:
         try:
             while self.running:
                 steam.run_callbacks()
-                # 统一检查：有没有收到“开始游戏”的标志
+
+                # ===== 修改：统一检查是否收到 Room 对象 =====
+                if self._received_room:
+                    dbg("[Lobby] 检测到 Room 对象，启动游戏")
+                    room = self._received_room
+                    self._received_room = None  # 清空以避免重复进入
+                    return "STATE_GAME", room
+
+                # 旧方式兼容（通过 Lobby 数据）
                 if self._start_payload:
                     minBet, initBet, ts = self._start_payload
-                    players = self._collect_players()
-                    # 按你主程序的期望组织 data（示例先用原来的三项；若主程序需要更多，按你的 Room/PlayScreen 所需扩展）
-                    return "STATE_GAME", [players, minBet, initBet]
+                    # 如果还没有 Room 对象，用旧方式创建
+                    if not hasattr(self, '_received_room') or not self._received_room:
+                        players = self._collect_players()
+                        room = Room([players, minBet, initBet])
+                        return "STATE_GAME", room
+
                 ret = self.handle_events()
                 if ret:
                     next_state, data = ret
-                    if next_state == "STATE_GAME":
+                    if next_state:
                         return next_state, data
                 self.draw()
         finally:
             self._uninstall_callbacks()
         return "STATE_QUIT", None
+
+    def prepare_room_for_transfer(room):
+        """
+        准备 Room 对象用于网络传输
+        如果 Room 中有不可序列化的对象，在这里处理
+
+        Args:
+            room: Room 对象
+
+        Returns:
+            可序列化的 Room 对象
+        """
+        # 如果 Card 类有 Pygame Surface，移除或转换
+        # 示例：
+        # for card in room.cards:
+        #     if hasattr(card, 'image'):
+        #         card.image = None  # 临时移除图像
+
+        return room
+
+    def restore_room_after_transfer(room):
+        """
+        恢复传输后的 Room 对象
+        重新初始化不可序列化的部分
+
+        Args:
+            room: 接收到的 Room 对象
+
+        Returns:
+            完整的 Room 对象
+        """
+        # 示例：重新加载卡牌图像
+        # for card in room.cards:
+        #     card.load_image()  # 重新加载图像
+
+        return room
