@@ -1,11 +1,13 @@
-# -*- mode: python ; coding: utf-8 -*-
-
+# pyinstaller build.spec
+# 记得先将steam_wrapper.pyd改名成steam_wrapper.pyd
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
-    datas=[('languages', 'languages'), ('themes', 'themes'), ('sounds', 'sounds'), ('steam_api64.dll', '.'), ('steam_appid.txt', '.')],
+    binaries=[
+        ('steam_wrapper.pyd', '.')
+    ],
+    datas=[('resources', 'resources'), ('steam_api64.dll', '.'), ('steam_appid.txt', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -21,7 +23,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='pyTexas 0.5.10.11.1',
+    name='pyTexas-0.5.10.17.1',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -32,6 +34,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    contents_directory='.',
 )
 coll = COLLECT(
     exe,
