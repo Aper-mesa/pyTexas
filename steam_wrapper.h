@@ -18,7 +18,7 @@ struct SteamCallback {
   struct __pyx_vtabstruct_13steam_wrapper_SteamCallback *__pyx_vtab;
   void *_handler;
   PyObject *_py_callback;
-  int _callback_id;
+  int callback_id;
 };
 
 #ifndef __PYX_HAVE_API__steam_wrapper

@@ -3,7 +3,6 @@ import time
 import pygame as g
 import pygame_gui as gui
 
-import net
 import player
 import steam_wrapper as steam
 from round import Room
@@ -33,17 +32,7 @@ def _after_leave_lobby():
 
 class Lobby:
     def __init__(self, screen, manager, current_player: player.Player, max_members: int = 9):
-        try:
-            self.messenger = net.create_messenger(steam)
-            dbg("[Lobby] Steam 网络消息系统初始化成功")
-            self.messenger.register_handler(
-                net.SteamNetworkMessenger.CHANNEL_ROOM_DATA,
-                self._on_room_received
-            )
-        except Exception as e:
-            dbg(f"[Lobby] 网络消息系统初始化失败: {e}")
-            self.messenger = None
-
+        print("Lobby init")
         self._received_room = None
 
         self.screen = screen
@@ -288,7 +277,7 @@ class Lobby:
                 return
 
             raw = steam.get_lobby_data(self.lobby_id, "start")
-            s = (raw or b"").decode("utf-8", "ignore").strip()
+            s = (raw or b"").strip()
 
             # 如果 s 是空的，说明 "start" 数据还没被房主设置，直接忽略这次更新
             if not s:
@@ -369,7 +358,7 @@ class Lobby:
             steam_id = steam.get_lobby_member_by_index(self.lobby_id, i)
             raw = steam.get_lobby_member_data(self.lobby_id, steam_id, "player")
 
-            s = raw.decode("utf-8", "ignore")
+            s = raw.decode("utf-8", "ignore") if raw else ""
             name, steam_id, money = s.split(",", 3)
             p = player.Player(steam_id, name, money)
             p.money = int(money)
@@ -404,7 +393,7 @@ class Lobby:
         for i in range(max(0, cnt)):
             fid = steam.get_friend_by_index(i, k_EFriendFlagImmediate)
             name = steam.get_friend_persona_name(fid)
-            display = (name or b"Unknown").decode("utf-8", "ignore")
+            display = name or b"Unknown"
             items.append(display)
             ids.append(fid)
         self._friend_ids = ids
@@ -418,7 +407,7 @@ class Lobby:
         for i in range(int(count)):
             sid = steam.get_lobby_member_by_index(self.lobby_id, i)
             pname = steam.get_friend_persona_name(sid)
-            display = (pname or b"").decode("utf-8", "ignore").strip()
+            display = (pname or b"")
             if not display:
                 p = steam.get_lobby_member_data(self.lobby_id, sid, "player_name")
                 display = (p or b"Unknown").decode("utf-8", "ignore")
@@ -463,11 +452,6 @@ class Lobby:
     # ---------- Loop ----------
     def handle_events(self):
         steam.run_callbacks()
-
-        # ===== 新增：处理网络消息 =====
-        if self.messenger:
-            self.messenger.process_messages()
-
         for event in g.event.get():
             if event.type == g.QUIT:
                 self.running = False
@@ -490,27 +474,6 @@ class Lobby:
                     # 1) 创建 Room 对象
                     players_list = self._collect_players()
                     room = Room([players_list, self.minBet, self.initBet])
-
-                    # 2) 广播 Room 给所有成员（使用网络消息）
-                    if self.messenger:
-                        member_ids = []
-                        count = steam.get_num_lobby_members(self.lobby_id)
-                        for i in range(count):
-                            sid = steam.get_lobby_member_by_index(self.lobby_id, i)
-                            if sid != self.my_steamid:
-                                member_ids.append(sid)
-
-                        # 广播 Room 对象
-                        success_count = self.messenger.broadcast_to_lobby(
-                            member_ids,
-                            room,
-                            channel=net.SteamNetworkMessenger.CHANNEL_ROOM_DATA,
-                            reliable=True
-                        )
-                        dbg(f"[Lobby] Room 已广播给 {success_count}/{len(member_ids)} 个成员")
-
-                        # 给一点时间让消息发送出去
-                        time.sleep(0.2)
 
                     # 3) 设置 Lobby 数据标记（兼容旧方式）
                     ts = int(time.time())

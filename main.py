@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -9,13 +10,22 @@ import steam_wrapper as steam
 import tools
 from Lobby import Lobby
 from Login import Login
-from round import Room, PlayScreen
+from round import PlayScreen
+import player
 
 
 def main():
     running_dir = tools.resource_path('.')
     os.chdir(running_dir)
     steam.init()
+
+    if not os.path.exists('data'): os.mkdir('data')
+    sid = steam.get_my_steam_id()
+    if os.path.exists(f"data/{sid}.json"):
+        data = json.load(open(f"data/{sid}.json"))
+        current_player = player.Player(data['steam_id'], data['username'], data['money'])
+    else:
+        current_player = player.Player(steam.get_my_steam_id(), steam.get_my_persona_name())
 
     pygame.mixer.pre_init(44100, -16, 2, 512)
     os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"  # 0=最近邻(默认), 1=线性, 2=best
@@ -42,7 +52,6 @@ def main():
 
     current_state = "STATE_LOGIN"
 
-    loginInstance = None
     data = None
 
     manager = gui.UIManager((screen.get_size()), starting_language='zh',
@@ -53,19 +62,16 @@ def main():
         steam.run_callbacks()
         if current_state == "STATE_LOGIN":
             login = Login(screen, manager)
-            loginInstance = login
             next_state = login.run()
             _cleanup_scene(login, screen)
             current_state = next_state
         elif current_state == "STATE_LOBBY":
-            if loginInstance:
-                if loginInstance.currentPlayer:
-                    lobby = Lobby(screen, manager, loginInstance.currentPlayer)
-                    next_state, data = lobby.run()
-                    _cleanup_scene(lobby, screen)
-                    current_state = next_state
+            lobby = Lobby(screen, manager, current_player)
+            next_state, data = lobby.run()
+            _cleanup_scene(lobby, screen)
+            current_state = next_state
         elif current_state == 'STATE_GAME':
-            game = PlayScreen(screen, manager, data, loginInstance.currentPlayer)
+            game = PlayScreen(screen, manager, data, current_player)
             _cleanup_scene(game, screen)
             # current_state = next_state
         elif current_state == "STATE_QUIT":

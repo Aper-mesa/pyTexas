@@ -110,7 +110,7 @@ cdef public class SteamCallback[object SteamCallback, type SteamCallback_Type]:
     cdef:
         void * _handler
         object _py_callback
-        int _callback_id
+        int callback_id
 
     def __cinit__(self, int callback_id, object py_callback):
         self.callback_id = callback_id

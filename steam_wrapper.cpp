@@ -1567,7 +1567,7 @@ struct SteamCallback {
   struct __pyx_vtabstruct_13steam_wrapper_SteamCallback *__pyx_vtab;
   void *_handler;
   PyObject *_py_callback;
-  int _callback_id;
+  int callback_id;
 };
 
 __PYX_EXTERN_C DL_EXPORT(PyTypeObject) SteamCallback_Type;
@@ -1891,22 +1891,6 @@ static CYTHON_INLINE PyObject *__Pyx_CallUnboundCMethod2(__Pyx_CachedCFunction *
 static void __Pyx_RaiseArgtupleInvalid(const char* func_name, int exact,
     Py_ssize_t num_min, Py_ssize_t num_max, Py_ssize_t num_found);
 
-/* PyObjectDelAttr.proto */
-#if CYTHON_COMPILING_IN_LIMITED_API && __PYX_LIMITED_VERSION_HEX < 0x030d0000
-#define __Pyx_PyObject_DelAttr(o, n) PyObject_SetAttr(o, n, NULL)
-#else
-#define __Pyx_PyObject_DelAttr(o, n) PyObject_DelAttr(o, n)
-#endif
-
-/* PyObjectSetAttrStr.proto */
-#if CYTHON_USE_TYPE_SLOTS
-#define __Pyx_PyObject_DelAttrStr(o,n) __Pyx_PyObject_SetAttrStr(o, n, NULL)
-static CYTHON_INLINE int __Pyx_PyObject_SetAttrStr(PyObject* obj, PyObject* attr_name, PyObject* value);
-#else
-#define __Pyx_PyObject_DelAttrStr(o,n)   __Pyx_PyObject_DelAttr(o,n)
-#define __Pyx_PyObject_SetAttrStr(o,n,v) PyObject_SetAttr(o,n,v)
-#endif
-
 /* BuildPyUnicode.proto */
 static PyObject* __Pyx_PyUnicode_BuildFromAscii(Py_ssize_t ulength, const char* chars, int clength,
                                                 int prepend_sign, char padding_char);
@@ -1932,14 +1916,6 @@ static PyObject* __Pyx_PyUnicode_Join(PyObject** values, Py_ssize_t value_count,
 
 /* RaiseException.proto */
 static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
-
-/* PyLongCompare.proto */
-static CYTHON_INLINE int __Pyx_PyLong_BoolEqObjC(PyObject *op1, PyObject *op2, long intval, long inplace);
-
-/* WriteUnraisableException.proto */
-static void __Pyx_WriteUnraisable(const char *name, int clineno,
-                                  int lineno, const char *filename,
-                                  int full_traceback, int nogil);
 
 /* RejectKeywords.proto */
 static void __Pyx_RejectKeywords(const char* function_name, PyObject *kwds);
@@ -2277,9 +2253,6 @@ static int __Pyx_VectorcallBuilder_AddArgStr(const char *key, PyObject *value, P
 #endif
 
 /* CIntToPy.proto */
-static CYTHON_INLINE PyObject* __Pyx_PyLong_From_int(int value);
-
-/* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyLong_From_EResult(EResult value);
 
 /* CIntToPy.proto */
@@ -2287,6 +2260,9 @@ static CYTHON_INLINE PyObject* __Pyx_PyLong_From_unsigned_PY_LONG_LONG(unsigned 
 
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyLong_From_unsigned_int(unsigned int value);
+
+/* CIntToPy.proto */
+static CYTHON_INLINE PyObject* __Pyx_PyLong_From_int(int value);
 
 /* CIntFromPy.proto */
 static CYTHON_INLINE ELobbyType __Pyx_PyLong_As_ELobbyType(PyObject *);
@@ -2613,14 +2589,6 @@ typedef struct {
   PyObject *__pyx_codeobj_tab[25];
   PyObject *__pyx_string_tab[95];
   PyObject *__pyx_int_0;
-  PyObject *__pyx_int_331;
-  PyObject *__pyx_int_333;
-  PyObject *__pyx_int_337;
-  PyObject *__pyx_int_503;
-  PyObject *__pyx_int_504;
-  PyObject *__pyx_int_505;
-  PyObject *__pyx_int_506;
-  PyObject *__pyx_int_513;
 /* #### Code section: module_state_contents ### */
 /* CommonTypesMetaclass.module_state_decls */
 PyTypeObject *__pyx_CommonTypesMetaclassType;
@@ -2778,14 +2746,6 @@ static CYTHON_SMALL_CODE int __pyx_m_clear(PyObject *m) {
   for (int i=0; i<25; ++i) { Py_CLEAR(clear_module_state->__pyx_codeobj_tab[i]); }
   for (int i=0; i<95; ++i) { Py_CLEAR(clear_module_state->__pyx_string_tab[i]); }
   Py_CLEAR(clear_module_state->__pyx_int_0);
-  Py_CLEAR(clear_module_state->__pyx_int_331);
-  Py_CLEAR(clear_module_state->__pyx_int_333);
-  Py_CLEAR(clear_module_state->__pyx_int_337);
-  Py_CLEAR(clear_module_state->__pyx_int_503);
-  Py_CLEAR(clear_module_state->__pyx_int_504);
-  Py_CLEAR(clear_module_state->__pyx_int_505);
-  Py_CLEAR(clear_module_state->__pyx_int_506);
-  Py_CLEAR(clear_module_state->__pyx_int_513);
   return 0;
 }
 #endif
@@ -2811,21 +2771,13 @@ static CYTHON_SMALL_CODE int __pyx_m_traverse(PyObject *m, visitproc visit, void
   for (int i=0; i<25; ++i) { __Pyx_VISIT_CONST(traverse_module_state->__pyx_codeobj_tab[i]); }
   for (int i=0; i<95; ++i) { __Pyx_VISIT_CONST(traverse_module_state->__pyx_string_tab[i]); }
   __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_0);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_331);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_333);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_337);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_503);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_504);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_505);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_506);
-  __Pyx_VISIT_CONST(traverse_module_state->__pyx_int_513);
   return 0;
 }
 #endif
 /* #### Code section: module_code ### */
 
 /* "steam_wrapper.pyx":115
- *         int _callback_id
+ *         int callback_id
  * 
  *     def __cinit__(self, int callback_id, object py_callback):             # <<<<<<<<<<<<<<
  *         self.callback_id = callback_id
@@ -2930,10 +2882,7 @@ static int __pyx_pf_13steam_wrapper_13SteamCallback___cinit__(struct SteamCallba
  *         self._py_callback = py_callback
  *         self._handler = NULL
 */
-  __pyx_t_1 = __Pyx_PyLong_From_int(__pyx_v_callback_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 116, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (__Pyx_PyObject_SetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id, __pyx_t_1) < 0) __PYX_ERR(0, 116, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_v_self->callback_id = __pyx_v_callback_id;
 
   /* "steam_wrapper.pyx":117
  *     def __cinit__(self, int callback_id, object py_callback):
@@ -3155,7 +3104,7 @@ static int __pyx_pf_13steam_wrapper_13SteamCallback___cinit__(struct SteamCallba
   }
 
   /* "steam_wrapper.pyx":115
- *         int _callback_id
+ *         int callback_id
  * 
  *     def __cinit__(self, int callback_id, object py_callback):             # <<<<<<<<<<<<<<
  *         self.callback_id = callback_id
@@ -3986,13 +3935,7 @@ static void __pyx_pw_13steam_wrapper_13SteamCallback_3__dealloc__(PyObject *__py
 }
 
 static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCallback *__pyx_v_self) {
-  __Pyx_RefNannyDeclarations
   int __pyx_t_1;
-  PyObject *__pyx_t_2 = NULL;
-  int __pyx_lineno = 0;
-  const char *__pyx_filename = NULL;
-  int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("__dealloc__", 0);
 
   /* "steam_wrapper.pyx":179
  * 
@@ -4011,11 +3954,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_lobby_created_handler(self._handler)
  *             elif self.callback_id == 333:
 */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 180, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_513, 0x201, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 180, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+    switch (__pyx_v_self->callback_id) {
+      case 0x201:
 
       /* "steam_wrapper.pyx":181
  *         if self._handler != NULL:
@@ -4033,21 +3973,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_lobby_created_handler(self._handler)
  *             elif self.callback_id == 333:
 */
-      goto __pyx_L4;
-    }
-
-    /* "steam_wrapper.pyx":182
- *             if self.callback_id == 513:
- *                 del_lobby_created_handler(self._handler)
- *             elif self.callback_id == 333:             # <<<<<<<<<<<<<<
- *                 del_join_requested_handler(self._handler)
- *             elif self.callback_id == 504:
-*/
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 182, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_333, 0x14D, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 182, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+      break;
+      case 0x14D:
 
       /* "steam_wrapper.pyx":183
  *                 del_lobby_created_handler(self._handler)
@@ -4065,21 +3992,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_join_requested_handler(self._handler)
  *             elif self.callback_id == 504:
 */
-      goto __pyx_L4;
-    }
-
-    /* "steam_wrapper.pyx":184
- *             elif self.callback_id == 333:
- *                 del_join_requested_handler(self._handler)
- *             elif self.callback_id == 504:             # <<<<<<<<<<<<<<
- *                 del_lobby_enter_handler(self._handler)
- *             elif self.callback_id == 506:
-*/
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 184, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_504, 0x1F8, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 184, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+      break;
+      case 0x1F8:
 
       /* "steam_wrapper.pyx":185
  *                 del_join_requested_handler(self._handler)
@@ -4097,21 +4011,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_lobby_enter_handler(self._handler)
  *             elif self.callback_id == 506:
 */
-      goto __pyx_L4;
-    }
-
-    /* "steam_wrapper.pyx":186
- *             elif self.callback_id == 504:
- *                 del_lobby_enter_handler(self._handler)
- *             elif self.callback_id == 506:             # <<<<<<<<<<<<<<
- *                 del_lobby_chat_update_handler(self._handler)
- *             elif self.callback_id == 505:
-*/
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 186, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_506, 0x1FA, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 186, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+      break;
+      case 0x1FA:
 
       /* "steam_wrapper.pyx":187
  *                 del_lobby_enter_handler(self._handler)
@@ -4129,21 +4030,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_lobby_chat_update_handler(self._handler)
  *             elif self.callback_id == 505:
 */
-      goto __pyx_L4;
-    }
-
-    /* "steam_wrapper.pyx":188
- *             elif self.callback_id == 506:
- *                 del_lobby_chat_update_handler(self._handler)
- *             elif self.callback_id == 505:             # <<<<<<<<<<<<<<
- *                 del_lobby_data_update_handler(self._handler)
- *             elif self.callback_id == 503:
-*/
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 188, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_505, 0x1F9, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 188, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+      break;
+      case 0x1F9:
 
       /* "steam_wrapper.pyx":189
  *                 del_lobby_chat_update_handler(self._handler)
@@ -4161,21 +4049,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_lobby_data_update_handler(self._handler)
  *             elif self.callback_id == 503:
 */
-      goto __pyx_L4;
-    }
-
-    /* "steam_wrapper.pyx":190
- *             elif self.callback_id == 505:
- *                 del_lobby_data_update_handler(self._handler)
- *             elif self.callback_id == 503:             # <<<<<<<<<<<<<<
- *                 del_lobby_invite_handler(self._handler)
- *             elif self.callback_id == 337:
-*/
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 190, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_503, 0x1F7, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 190, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+      break;
+      case 0x1F7:
 
       /* "steam_wrapper.pyx":191
  *                 del_lobby_data_update_handler(self._handler)
@@ -4193,21 +4068,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_lobby_invite_handler(self._handler)
  *             elif self.callback_id == 337:
 */
-      goto __pyx_L4;
-    }
-
-    /* "steam_wrapper.pyx":192
- *             elif self.callback_id == 503:
- *                 del_lobby_invite_handler(self._handler)
- *             elif self.callback_id == 337:             # <<<<<<<<<<<<<<
- *                 del_game_rich_presence_join_requested_handler(self._handler)
- *             elif self.callback_id == 331:
-*/
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 192, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_337, 0x151, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 192, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+      break;
+      case 0x151:
 
       /* "steam_wrapper.pyx":193
  *                 del_lobby_invite_handler(self._handler)
@@ -4225,21 +4087,8 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_game_rich_presence_join_requested_handler(self._handler)
  *             elif self.callback_id == 331:
 */
-      goto __pyx_L4;
-    }
-
-    /* "steam_wrapper.pyx":194
- *             elif self.callback_id == 337:
- *                 del_game_rich_presence_join_requested_handler(self._handler)
- *             elif self.callback_id == 331:             # <<<<<<<<<<<<<<
- *                 del_game_overlay_activated_handler(self._handler)
- *             self._handler = NULL
-*/
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_mstate_global->__pyx_n_u_callback_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 194, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = (__Pyx_PyLong_BoolEqObjC(__pyx_t_2, __pyx_mstate_global->__pyx_int_331, 0x14B, 0)); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 194, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+      break;
+      case 0x14B:
 
       /* "steam_wrapper.pyx":195
  *                 del_game_rich_presence_join_requested_handler(self._handler)
@@ -4257,8 +4106,9 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
  *                 del_game_overlay_activated_handler(self._handler)
  *             self._handler = NULL
 */
+      break;
+      default: break;
     }
-    __pyx_L4:;
 
     /* "steam_wrapper.pyx":196
  *             elif self.callback_id == 331:
@@ -4287,12 +4137,6 @@ static void __pyx_pf_13steam_wrapper_13SteamCallback_2__dealloc__(struct SteamCa
 */
 
   /* function exit code */
-  goto __pyx_L0;
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_2);
-  __Pyx_WriteUnraisable("steam_wrapper.SteamCallback.__dealloc__", __pyx_clineno, __pyx_lineno, __pyx_filename, 1, 0);
-  __pyx_L0:;
-  __Pyx_RefNannyFinishContext();
 }
 
 /* "(tree fragment)":1
@@ -9182,14 +9026,6 @@ static int __Pyx_InitConstants(__pyx_mstatetype *__pyx_mstate) {
   __pyx_mstate->__pyx_umethod_PyDict_Type_pop.method_name = &__pyx_mstate->__pyx_n_u_pop;
   if (__Pyx_InitStrings(__pyx_string_tab, __pyx_mstate->__pyx_string_tab, __pyx_string_tab_encodings) < 0) __PYX_ERR(0, 1, __pyx_L1_error);
   __pyx_mstate->__pyx_int_0 = PyLong_FromLong(0); if (unlikely(!__pyx_mstate->__pyx_int_0)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_331 = PyLong_FromLong(331); if (unlikely(!__pyx_mstate->__pyx_int_331)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_333 = PyLong_FromLong(333); if (unlikely(!__pyx_mstate->__pyx_int_333)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_337 = PyLong_FromLong(337); if (unlikely(!__pyx_mstate->__pyx_int_337)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_503 = PyLong_FromLong(503); if (unlikely(!__pyx_mstate->__pyx_int_503)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_504 = PyLong_FromLong(504); if (unlikely(!__pyx_mstate->__pyx_int_504)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_505 = PyLong_FromLong(505); if (unlikely(!__pyx_mstate->__pyx_int_505)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_506 = PyLong_FromLong(506); if (unlikely(!__pyx_mstate->__pyx_int_506)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_mstate->__pyx_int_513 = PyLong_FromLong(513); if (unlikely(!__pyx_mstate->__pyx_int_513)) __PYX_ERR(0, 1, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -10591,16 +10427,6 @@ static void __Pyx_RaiseArgtupleInvalid(
                  (num_expected == 1) ? "" : "s", num_found);
 }
 
-/* PyObjectSetAttrStr */
-#if CYTHON_USE_TYPE_SLOTS
-static CYTHON_INLINE int __Pyx_PyObject_SetAttrStr(PyObject* obj, PyObject* attr_name, PyObject* value) {
-    PyTypeObject* tp = Py_TYPE(obj);
-    if (likely(tp->tp_setattro))
-        return tp->tp_setattro(obj, attr_name, value);
-    return PyObject_SetAttr(obj, attr_name, value);
-}
-#endif
-
 /* CIntToDigits */
 static const char DIGIT_PAIRS_10[2*10*10+1] = {
     "00010203040506070809"
@@ -11019,103 +10845,6 @@ static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject 
 bad:
     Py_XDECREF(owned_instance);
     return;
-}
-
-/* PyLongCompare */
-static CYTHON_INLINE int __Pyx_PyLong_BoolEqObjC(PyObject *op1, PyObject *op2, long intval, long inplace) {
-    CYTHON_MAYBE_UNUSED_VAR(intval);
-    CYTHON_UNUSED_VAR(inplace);
-    if (op1 == op2) {
-        return 1;
-    }
-    #if CYTHON_USE_PYLONG_INTERNALS
-    if (likely(PyLong_CheckExact(op1))) {
-        int unequal;
-        unsigned long uintval;
-        Py_ssize_t size = __Pyx_PyLong_DigitCount(op1);
-        const digit* digits = __Pyx_PyLong_Digits(op1);
-        if (intval == 0) {
-            return (__Pyx_PyLong_IsZero(op1) == 1);
-        } else if (intval < 0) {
-            if (__Pyx_PyLong_IsNonNeg(op1))
-                return 0;
-            intval = -intval;
-        } else {
-            if (__Pyx_PyLong_IsNeg(op1))
-                return 0;
-        }
-        uintval = (unsigned long) intval;
-#if PyLong_SHIFT * 4 < SIZEOF_LONG*8
-        if (uintval >> (PyLong_SHIFT * 4)) {
-            unequal = (size != 5) || (digits[0] != (uintval & (unsigned long) PyLong_MASK))
-                 | (digits[1] != ((uintval >> (1 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK)) | (digits[2] != ((uintval >> (2 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK)) | (digits[3] != ((uintval >> (3 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK)) | (digits[4] != ((uintval >> (4 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK));
-        } else
-#endif
-#if PyLong_SHIFT * 3 < SIZEOF_LONG*8
-        if (uintval >> (PyLong_SHIFT * 3)) {
-            unequal = (size != 4) || (digits[0] != (uintval & (unsigned long) PyLong_MASK))
-                 | (digits[1] != ((uintval >> (1 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK)) | (digits[2] != ((uintval >> (2 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK)) | (digits[3] != ((uintval >> (3 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK));
-        } else
-#endif
-#if PyLong_SHIFT * 2 < SIZEOF_LONG*8
-        if (uintval >> (PyLong_SHIFT * 2)) {
-            unequal = (size != 3) || (digits[0] != (uintval & (unsigned long) PyLong_MASK))
-                 | (digits[1] != ((uintval >> (1 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK)) | (digits[2] != ((uintval >> (2 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK));
-        } else
-#endif
-#if PyLong_SHIFT * 1 < SIZEOF_LONG*8
-        if (uintval >> (PyLong_SHIFT * 1)) {
-            unequal = (size != 2) || (digits[0] != (uintval & (unsigned long) PyLong_MASK))
-                 | (digits[1] != ((uintval >> (1 * PyLong_SHIFT)) & (unsigned long) PyLong_MASK));
-        } else
-#endif
-            unequal = (size != 1) || (((unsigned long) digits[0]) != (uintval & (unsigned long) PyLong_MASK));
-        return (unequal == 0);
-    }
-    #endif
-    if (PyFloat_CheckExact(op1)) {
-        const long b = intval;
-        double a = __Pyx_PyFloat_AS_DOUBLE(op1);
-        return ((double)a == (double)b);
-    }
-    return __Pyx_PyObject_IsTrueAndDecref(
-        PyObject_RichCompare(op1, op2, Py_EQ));
-}
-
-/* WriteUnraisableException */
-static void __Pyx_WriteUnraisable(const char *name, int clineno,
-                                  int lineno, const char *filename,
-                                  int full_traceback, int nogil) {
-    PyObject *old_exc, *old_val, *old_tb;
-    PyObject *ctx;
-    __Pyx_PyThreadState_declare
-    PyGILState_STATE state;
-    if (nogil)
-        state = PyGILState_Ensure();
-    else state = (PyGILState_STATE)0;
-    CYTHON_UNUSED_VAR(clineno);
-    CYTHON_UNUSED_VAR(lineno);
-    CYTHON_UNUSED_VAR(filename);
-    CYTHON_MAYBE_UNUSED_VAR(nogil);
-    __Pyx_PyThreadState_assign
-    __Pyx_ErrFetch(&old_exc, &old_val, &old_tb);
-    if (full_traceback) {
-        Py_XINCREF(old_exc);
-        Py_XINCREF(old_val);
-        Py_XINCREF(old_tb);
-        __Pyx_ErrRestore(old_exc, old_val, old_tb);
-        PyErr_PrintEx(0);
-    }
-    ctx = PyUnicode_FromString(name);
-    __Pyx_ErrRestore(old_exc, old_val, old_tb);
-    if (!ctx) {
-        PyErr_WriteUnraisable(Py_None);
-    } else {
-        PyErr_WriteUnraisable(ctx);
-        Py_DECREF(ctx);
-    }
-    if (nogil)
-        PyGILState_Release(state);
 }
 
 /* RejectKeywords */
@@ -14110,77 +13839,6 @@ CYTHON_UNUSED static int __Pyx_VectorcallBuilder_AddArg_Check(PyObject *key, PyO
 #endif
 
 /* CIntToPy */
-static CYTHON_INLINE PyObject* __Pyx_PyLong_From_int(int value) {
-#ifdef __Pyx_HAS_GCC_DIAGNOSTIC
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
-    const int neg_one = (int) -1, const_zero = (int) 0;
-#ifdef __Pyx_HAS_GCC_DIAGNOSTIC
-#pragma GCC diagnostic pop
-#endif
-    const int is_unsigned = neg_one > const_zero;
-    if (is_unsigned) {
-        if (sizeof(int) < sizeof(long)) {
-            return PyLong_FromLong((long) value);
-        } else if (sizeof(int) <= sizeof(unsigned long)) {
-            return PyLong_FromUnsignedLong((unsigned long) value);
-#if defined(HAVE_LONG_LONG) && !CYTHON_COMPILING_IN_PYPY
-        } else if (sizeof(int) <= sizeof(unsigned PY_LONG_LONG)) {
-            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
-#endif
-        }
-    } else {
-        if (sizeof(int) <= sizeof(long)) {
-            return PyLong_FromLong((long) value);
-#ifdef HAVE_LONG_LONG
-        } else if (sizeof(int) <= sizeof(PY_LONG_LONG)) {
-            return PyLong_FromLongLong((PY_LONG_LONG) value);
-#endif
-        }
-    }
-    {
-        unsigned char *bytes = (unsigned char *)&value;
-#if !CYTHON_COMPILING_IN_LIMITED_API && PY_VERSION_HEX >= 0x030d00A4
-        if (is_unsigned) {
-            return PyLong_FromUnsignedNativeBytes(bytes, sizeof(value), -1);
-        } else {
-            return PyLong_FromNativeBytes(bytes, sizeof(value), -1);
-        }
-#elif !CYTHON_COMPILING_IN_LIMITED_API && PY_VERSION_HEX < 0x030d0000
-        int one = 1; int little = (int)*(unsigned char *)&one;
-        return _PyLong_FromByteArray(bytes, sizeof(int),
-                                     little, !is_unsigned);
-#else
-        int one = 1; int little = (int)*(unsigned char *)&one;
-        PyObject *from_bytes, *result = NULL, *kwds = NULL;
-        PyObject *py_bytes = NULL, *order_str = NULL;
-        from_bytes = PyObject_GetAttrString((PyObject*)&PyLong_Type, "from_bytes");
-        if (!from_bytes) return NULL;
-        py_bytes = PyBytes_FromStringAndSize((char*)bytes, sizeof(int));
-        if (!py_bytes) goto limited_bad;
-        order_str = PyUnicode_FromString(little ? "little" : "big");
-        if (!order_str) goto limited_bad;
-        {
-            PyObject *args[3+(CYTHON_VECTORCALL ? 1 : 0)] = { NULL, py_bytes, order_str };
-            if (!is_unsigned) {
-                kwds = __Pyx_MakeVectorcallBuilderKwds(1);
-                if (!kwds) goto limited_bad;
-                if (__Pyx_VectorcallBuilder_AddArgStr("signed", __Pyx_NewRef(Py_True), kwds, args+3, 0) < 0) goto limited_bad;
-            }
-            result = __Pyx_Object_Vectorcall_CallFromBuilder(from_bytes, args+1, 2 | __Pyx_PY_VECTORCALL_ARGUMENTS_OFFSET, kwds);
-        }
-        limited_bad:
-        Py_XDECREF(kwds);
-        Py_XDECREF(order_str);
-        Py_XDECREF(py_bytes);
-        Py_XDECREF(from_bytes);
-        return result;
-#endif
-    }
-}
-
-/* CIntToPy */
 static CYTHON_INLINE PyObject* __Pyx_PyLong_From_EResult(EResult value) {
 #ifdef __Pyx_HAS_GCC_DIAGNOSTIC
 #pragma GCC diagnostic push
@@ -14371,6 +14029,77 @@ static CYTHON_INLINE PyObject* __Pyx_PyLong_From_unsigned_int(unsigned int value
         from_bytes = PyObject_GetAttrString((PyObject*)&PyLong_Type, "from_bytes");
         if (!from_bytes) return NULL;
         py_bytes = PyBytes_FromStringAndSize((char*)bytes, sizeof(unsigned int));
+        if (!py_bytes) goto limited_bad;
+        order_str = PyUnicode_FromString(little ? "little" : "big");
+        if (!order_str) goto limited_bad;
+        {
+            PyObject *args[3+(CYTHON_VECTORCALL ? 1 : 0)] = { NULL, py_bytes, order_str };
+            if (!is_unsigned) {
+                kwds = __Pyx_MakeVectorcallBuilderKwds(1);
+                if (!kwds) goto limited_bad;
+                if (__Pyx_VectorcallBuilder_AddArgStr("signed", __Pyx_NewRef(Py_True), kwds, args+3, 0) < 0) goto limited_bad;
+            }
+            result = __Pyx_Object_Vectorcall_CallFromBuilder(from_bytes, args+1, 2 | __Pyx_PY_VECTORCALL_ARGUMENTS_OFFSET, kwds);
+        }
+        limited_bad:
+        Py_XDECREF(kwds);
+        Py_XDECREF(order_str);
+        Py_XDECREF(py_bytes);
+        Py_XDECREF(from_bytes);
+        return result;
+#endif
+    }
+}
+
+/* CIntToPy */
+static CYTHON_INLINE PyObject* __Pyx_PyLong_From_int(int value) {
+#ifdef __Pyx_HAS_GCC_DIAGNOSTIC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
+    const int neg_one = (int) -1, const_zero = (int) 0;
+#ifdef __Pyx_HAS_GCC_DIAGNOSTIC
+#pragma GCC diagnostic pop
+#endif
+    const int is_unsigned = neg_one > const_zero;
+    if (is_unsigned) {
+        if (sizeof(int) < sizeof(long)) {
+            return PyLong_FromLong((long) value);
+        } else if (sizeof(int) <= sizeof(unsigned long)) {
+            return PyLong_FromUnsignedLong((unsigned long) value);
+#if defined(HAVE_LONG_LONG) && !CYTHON_COMPILING_IN_PYPY
+        } else if (sizeof(int) <= sizeof(unsigned PY_LONG_LONG)) {
+            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
+#endif
+        }
+    } else {
+        if (sizeof(int) <= sizeof(long)) {
+            return PyLong_FromLong((long) value);
+#ifdef HAVE_LONG_LONG
+        } else if (sizeof(int) <= sizeof(PY_LONG_LONG)) {
+            return PyLong_FromLongLong((PY_LONG_LONG) value);
+#endif
+        }
+    }
+    {
+        unsigned char *bytes = (unsigned char *)&value;
+#if !CYTHON_COMPILING_IN_LIMITED_API && PY_VERSION_HEX >= 0x030d00A4
+        if (is_unsigned) {
+            return PyLong_FromUnsignedNativeBytes(bytes, sizeof(value), -1);
+        } else {
+            return PyLong_FromNativeBytes(bytes, sizeof(value), -1);
+        }
+#elif !CYTHON_COMPILING_IN_LIMITED_API && PY_VERSION_HEX < 0x030d0000
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        return _PyLong_FromByteArray(bytes, sizeof(int),
+                                     little, !is_unsigned);
+#else
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        PyObject *from_bytes, *result = NULL, *kwds = NULL;
+        PyObject *py_bytes = NULL, *order_str = NULL;
+        from_bytes = PyObject_GetAttrString((PyObject*)&PyLong_Type, "from_bytes");
+        if (!from_bytes) return NULL;
+        py_bytes = PyBytes_FromStringAndSize((char*)bytes, sizeof(int));
         if (!py_bytes) goto limited_bad;
         order_str = PyUnicode_FromString(little ? "little" : "big");
         if (!order_str) goto limited_bad;

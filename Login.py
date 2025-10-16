@@ -18,12 +18,11 @@ class Login:
             relative_rect=g.Rect(0, 0, 0, 0),
             text="enter_lobby",
             manager=self.manager,
-            object_id="#login_btn_big"  # 用于稍微放大按钮字体
+            object_id="#login_btn_big"
         )
 
-        # 语言按钮固定左上角
         self.language_button = gui.elements.UIButton(
-            relative_rect=g.Rect(10, 10, 90, 36),  # 稍微加高
+            relative_rect=g.Rect(10, 10, 90, 36),
             text="英语",
             manager=self.manager,
             object_id="#login_lang"
@@ -33,14 +32,12 @@ class Login:
             relative_rect=g.Rect(0, 0, 0, 0),
             manager=self.manager,
             text="",
-            object_id="#login_info_mid"  # 字体略放大
+            object_id="#login_info_mid"
         )
 
-        # 首次布局
         self._w, self._h = self.screen.get_size()
         self._relayout()
 
-    # -------------------- 布局 --------------------
     def _relayout(self):
         w, h = self.screen.get_size()
         cx = w // 2
@@ -54,7 +51,7 @@ class Login:
         info_y = title_y + int(h * 0.11)
 
         btn_w = int(w * 0.20)
-        btn_h = max(44, int(h * 0.08))  # 比原来 40 稍微大一圈
+        btn_h = max(44, int(h * 0.08))
         btn_y = info_y + int(h * 0.12)
 
         self.info_label.set_relative_position((cx - info_w // 2, info_y))
@@ -68,7 +65,6 @@ class Login:
 
         self._w, self._h = w, h
 
-    # -------------------- 事件逻辑 --------------------
     def handle_events(self):
         for event in g.event.get():
             if event.type == g.QUIT:
