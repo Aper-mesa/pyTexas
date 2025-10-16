@@ -302,7 +302,6 @@ class Lobby:
 
         def on_lobby_invite(data):
             dbg(f"on_lobby_invite: from={data['m_ulSteamIDUser']}, lobby={data['m_ulSteamIDLobby']}, gameid={data['m_ulGameID']}")
-            steam.join_lobby(data['m_ulSteamIDLobby'])
             self._set_status(f"收到邀请，正在加入Lobby {data['m_ulSteamIDLobby']} ...")
 
         def on_game_lobby_join_requested(data):
