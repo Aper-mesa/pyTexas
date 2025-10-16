@@ -26,8 +26,10 @@ CBID_GameOverlayActivated = 331
 
 def _after_leave_lobby():
     steam.clear_rich_presence()
+    steam.set_rich_presence("status", "在菜单中")
     steam.set_rich_presence("steam_player_group", "")
     steam.set_rich_presence("steam_player_group_size", "")
+    steam.set_rich_presence("steam_display", "")
 
 
 class Lobby:
@@ -78,20 +80,17 @@ class Lobby:
             relative_rect=g.Rect(0, 0, 0, 0), text="离开大厅", manager=self.manager
         )
 
-        # 右侧：成员列表（现在居中且更宽）
         self.members_list = gui.elements.UISelectionList(
             relative_rect=g.Rect(0, 0, 0, 0), item_list=[], manager=self.manager
         )
 
-        # 状态栏
         self.status_label = gui.elements.UILabel(
             relative_rect=g.Rect(0, 0, 0, 0),
             text=f"你好 {self.my_name} ({self.my_steamid})",
             manager=self.manager,
         )
 
-        # ===== Host controls (bottom centered) =====
-        self.is_host = False  # 进入/创建大厅后再置位
+        self.is_host = False
         self.minBet = 1
         self.initBet = 50
 
@@ -119,22 +118,17 @@ class Lobby:
             manager=self.manager
         )
 
-        # 初始隐藏（只有房主显示）
         for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
             el.hide()
 
-        # 初始时未在大厅，禁用邀请按钮
         self.invite_btn.disable()
 
         self.leave_btn.disable()
 
-        # 统一做一次布局
         self._relayout()
 
-        # 初始化
         self._load_friends_list()
 
-        # 冷启动 join：通过 Steam 启动并带 connect 时
         try:
             val = steam.get_launch_query_param("connect")
             if val:
@@ -150,6 +144,10 @@ class Lobby:
         except Exception as e:
             dbg(f"parse launch connect failed: {e}")
         dbg(f"overlay enabled? {bool(steam.is_overlay_enabled())}")
+
+        _after_leave_lobby()
+        self._set_status(f"你好 {self.my_name} ({self.my_steamid})")
+        dbg("Initial Rich Presence cleared on lobby entry.")
 
     def _on_room_received(self, sender_steam_id, room_obj):
         """处理接收到的 Room 对象（非房主回调）"""
@@ -212,52 +210,56 @@ class Lobby:
             dbg(f"on_lobby_created: result={data['m_eResult']}, lobby={data['m_ulSteamIDLobby']}")
             if data['m_eResult'] == 1:  # k_EResultOK
                 self.lobby_id = data['m_ulSteamIDLobby']
-                self.invite_btn.enable()
-                self._set_status(f"已创建Lobby：{self.lobby_id}，等待进入...")
-                # 创建成功视为房主
+                self._set_status(f"已创建Lobby：{self.lobby_id}")
+
+                # --- 房主专属逻辑 ---
                 self.is_host = True
-                self.create_btn.disable()
                 for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
                     el.show()
                     el.enable()
 
-                # 把自己资料写到 Lobby 成员数据，供别人读取
-                self._push_my_member_data()
+                # --- 调用公共设置函数 ---
+                _on_joined_lobby_common(self)
+
             else:
                 self._set_status(f"创建失败，EResult={data['m_eResult']}")
+
+        def _on_joined_lobby_common(self):
+            """无论是创建还是加入Lobby成功后，都应执行的通用逻辑"""
+            self.leave_btn.enable()
+            self.create_btn.disable()
+            self.invite_btn.enable()
+
+            self._push_my_member_data()
+
+            self._refresh_members_list()
+            self._refresh_member_names()
+
+            self._after_enter_lobby()
+
+            if self.is_host:
+                ok_joinable = steam.set_lobby_joinable(self.lobby_id, True)
+                dbg(f"SetLobbyJoinable(true) -> {ok_joinable}")
+
+                steam.set_lobby_data(self.lobby_id, "name", self.my_name)
+                steam.set_lobby_data(self.lobby_id, "ver", "1")
+                steam.set_lobby_data(self.lobby_id, "mode", "poker")
+                dbg("Lobby metadata set by host.")
 
         def on_lobby_enter(data):
             self.lobby_id = data['m_ulSteamIDLobby']
             dbg(f"on_lobby_enter: lobby={data['m_ulSteamIDLobby']}, locked={data['m_bLocked']}, enter_resp={data['m_EChatRoomEnterResponse']}")
             self._set_status(f"已进入Lobby：{self.lobby_id}")
-            self.leave_btn.enable()
-            self.create_btn.disable()
 
-            # 不是创建路径进入，则不是房主
+            # --- 客户端专属逻辑 ---
+            # 如果不是通过创建路径进入，则确定不是房主
             if not getattr(self, "is_host", False):
                 self.is_host = False
                 for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
                     el.hide()
 
-            # 进入后同样写一次自己的成员数据（昵称/ID/金钱）
-            self._push_my_member_data()
-
-            # 刷新成员列表（可选）
-            self._refresh_members_list()
-
-            self._after_enter_lobby()
-            self._refresh_member_names()
-            self.invite_btn.enable()
-
-            ok_joinable = steam.set_lobby_joinable(self.lobby_id, True)
-            dbg(f"SetLobbyJoinable(true) -> {ok_joinable}")
-
-            steam.set_lobby_data(self.lobby_id, "name", self.my_name)
-            steam.set_lobby_data(self.lobby_id, "ver", "1")
-            steam.set_lobby_data(self.lobby_id, "mode", "poker")
-
-            steam.set_lobby_member_data(self.lobby_id, "player_name", self.my_name)
-            dbg("Lobby data & member data set")
+            # --- 调用公共设置函数 ---
+            _on_joined_lobby_common(self)
 
         def on_lobby_chat_update(data):
             if data['m_ulSteamIDLobby'] == self.lobby_id:
@@ -268,11 +270,9 @@ class Lobby:
             self._refresh_member_names()
             self._refresh_members_list()
 
-            # 只处理当前 lobby
             if data['m_ulSteamIDLobby'] != self.lobby_id:
                 return
 
-            # 只有 Lobby 级变化才考虑 start（成员级更新直接忽略）
             if data['m_ulSteamIDMember'] not in (0, self.lobby_id):
                 return
 
@@ -367,7 +367,6 @@ class Lobby:
         return res
 
     def _refresh_members_list(self):
-        """（可选）如果你有右侧列表，就按需刷新一下显示"""
         try:
             players = self._collect_players()
             items = [f"{p.username} | {p.steam_id} | ¥{p.money}" for p in players]
@@ -375,7 +374,6 @@ class Lobby:
         except Exception:
             pass
 
-    # ---------- Helpers ----------
     def _set_status(self, msg: str):
         self.status_label.set_text(msg)
 
@@ -385,6 +383,13 @@ class Lobby:
         steam.set_rich_presence("steam_player_group", str(self.lobby_id))
         steam.set_rich_presence("steam_player_group_size", str(steam.get_num_lobby_members(self.lobby_id)))
         dbg(f"SetRichPresence connect={self.lobby_id}")
+        print(f'is host? {self.is_host}')
+        if self.is_host:
+            steam.set_rich_presence("steam_display", "#Status_Hosting")
+            dbg(f"SetRichPresence for HOST: connect={self.lobby_id}, steam_display=#Status_Hosting")
+        else:
+            steam.set_rich_presence("steam_display", "")
+            dbg(f"SetRichPresence for CLIENT: connect={self.lobby_id}")
 
     def _load_friends_list(self):
         k_EFriendFlagImmediate = 4
@@ -449,7 +454,6 @@ class Lobby:
             self.lobby_id = 0
             self.members_list.set_item_list([])
 
-    # ---------- Loop ----------
     def handle_events(self):
         steam.run_callbacks()
         for event in g.event.get():
@@ -467,21 +471,17 @@ class Lobby:
                 elif event.ui_element == self.leave_btn:
                     self.leave_lobby()
                 elif event.ui_element == self.ui_start_btn:
-                    # ===== 修改：房主开始游戏逻辑 =====
                     self.minBet = int(self.ui_min_bet.get_text().strip())
                     self.initBet = int(self.ui_init_bet.get_text().strip())
 
-                    # 1) 创建 Room 对象
                     players_list = self._collect_players()
                     room = Room([players_list, self.minBet, self.initBet])
 
-                    # 3) 设置 Lobby 数据标记（兼容旧方式）
                     ts = int(time.time())
                     payload = f"{self.minBet},{self.initBet},{ts}".encode("utf-8")
                     steam.set_lobby_data(self.lobby_id, "start", payload)
                     steam.set_lobby_joinable(self.lobby_id, False)
 
-                    # 4) 房主自己也保存 Room 对象
                     self._received_room = room
                     self._start_payload = (self.minBet, self.initBet, ts)
 
@@ -489,7 +489,6 @@ class Lobby:
                     return None, None
 
             if event.type == g.VIDEORESIZE:
-                # 只有尺寸真变了才 relayout，避免无谓刷新
                 new_w, new_h = event.w, event.h
                 if (new_w, new_h) != (self._w, self._h):
                     self._w, self._h = new_w, new_h
@@ -509,32 +508,26 @@ class Lobby:
         g.display.flip()
 
     def run(self):
-        try:
-            while self.running:
-                steam.run_callbacks()
-
-                # ===== 修改：统一检查是否收到 Room 对象 =====
-                if self._received_room:
-                    dbg("[Lobby] 检测到 Room 对象，启动游戏")
-                    room = self._received_room
-                    self._received_room = None  # 清空以避免重复进入
+        while self.running:
+            steam.run_callbacks()
+            # ===== 修改：统一检查是否收到 Room 对象 =====
+            if self._received_room:
+                dbg("[Lobby] 检测到 Room 对象，启动游戏")
+                room = self._received_room
+                self._received_room = None  # 清空以避免重复进入
+                return "STATE_GAME", room
+            # 旧方式兼容（通过 Lobby 数据）
+            if self._start_payload:
+                minBet, initBet, ts = self._start_payload
+                # 如果还没有 Room 对象，用旧方式创建
+                if not hasattr(self, '_received_room') or not self._received_room:
+                    players = self._collect_players()
+                    room = Room([players, minBet, initBet])
                     return "STATE_GAME", room
-
-                # 旧方式兼容（通过 Lobby 数据）
-                if self._start_payload:
-                    minBet, initBet, ts = self._start_payload
-                    # 如果还没有 Room 对象，用旧方式创建
-                    if not hasattr(self, '_received_room') or not self._received_room:
-                        players = self._collect_players()
-                        room = Room([players, minBet, initBet])
-                        return "STATE_GAME", room
-
-                ret = self.handle_events()
-                if ret:
-                    next_state, data = ret
-                    if next_state:
-                        return next_state, data
-                self.draw()
-        finally:
-            pass
+            ret = self.handle_events()
+            if ret:
+                next_state, data = ret
+                if next_state:
+                    return next_state, data
+            self.draw()
         return "STATE_QUIT", None
