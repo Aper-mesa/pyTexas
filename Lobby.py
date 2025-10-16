@@ -301,13 +301,29 @@ class Lobby:
                 dbg(f"解析 'start' 数据 '{s}' 时出错: {e}")
 
         def on_lobby_invite(data):
-            dbg(f"on_lobby_invite: from={data['m_ulSteamIDUser']}, lobby={data['m_ulSteamIDLobby']}, gameid={data['m_ulGameID']}")
-            self._set_status(f"收到邀请，正在加入Lobby {data['m_ulSteamIDLobby']} ...")
+            invited_lobby_id = data['m_ulSteamIDLobby']
+            dbg(f"on_lobby_invite: from={data['m_ulSteamIDUser']}, lobby={invited_lobby_id}, gameid={data['m_ulGameID']}")
+
+            # 检查是否已经在同一个lobby中
+            if self.lobby_id and self.lobby_id == invited_lobby_id:
+                dbg(f"已经在Lobby {invited_lobby_id} 中，忽略重复邀请")
+                self._set_status(f"你已经在这个大厅中了")
+                return
+
+            self._set_status(f"收到邀请，正在加入Lobby {invited_lobby_id} ...")
 
         def on_game_lobby_join_requested(data):
-            dbg(f"on_game_lobby_join_requested: friend={data['m_steamIDFriend']}, lobby={data['m_steamIDLobby']}")
-            steam.join_lobby(data['m_steamIDLobby'])
-            self._set_status(f"好友请求加入，进入Lobby {data['m_steamIDLobby']} ...")
+            requested_lobby_id = data['m_steamIDLobby']
+            dbg(f"on_game_lobby_join_requested: friend={data['m_steamIDFriend']}, lobby={requested_lobby_id}")
+
+            # 检查是否已经在同一个lobby中
+            if self.lobby_id and self.lobby_id == requested_lobby_id:
+                dbg(f"已经在Lobby {requested_lobby_id} 中，忽略重复加入请求")
+                self._set_status(f"你已经在这个大厅中了")
+                return
+
+            steam.join_lobby(requested_lobby_id)
+            self._set_status(f"好友请求加入，进入Lobby {requested_lobby_id} ...")
 
         def on_game_rich_presence_join_requested(data):
             connect = bytes(data['m_rgchConnect']).split(b'\x00', 1)[0].decode('utf-8', 'ignore')
@@ -317,10 +333,17 @@ class Lobby:
                 if s.startswith(prefix):
                     s = s[len(prefix):]
             try:
-                lid = int(s)
-                steam.join_lobby(lid)
-                self._set_status(f"RichPresence Join -> 加入 Lobby {lid} ...")
-                dbg(f"JoinLobby via RP connect: {lid}")
+                requested_lobby_id = int(s)
+
+                # 检查是否已经在同一个lobby中
+                if self.lobby_id and self.lobby_id == requested_lobby_id:
+                    dbg(f"已经在Lobby {requested_lobby_id} 中，忽略RichPresence重复加入")
+                    self._set_status(f"你已经在这个大厅中了")
+                    return
+
+                steam.join_lobby(requested_lobby_id)
+                self._set_status(f"RichPresence Join -> 加入 Lobby {requested_lobby_id} ...")
+                dbg(f"JoinLobby via RP connect: {requested_lobby_id}")
             except ValueError:
                 dbg(f"RichPresence connect 无法解析为数字 lobby id: '{connect}'")
                 self._set_status("收到 Join 请求但 connect 无效")
