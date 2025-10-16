@@ -5,7 +5,7 @@ import i18n
 import pygame
 import pygame_gui as gui
 
-import steam_bootstrap as steam
+import steam_wrapper as steam
 import tools
 from Lobby import Lobby
 from Login import Login
