@@ -381,14 +381,7 @@ class Lobby:
         steam.set_rich_presence("status", "In Lobby")
         steam.set_rich_presence("steam_player_group", str(self.lobby_id))
         steam.set_rich_presence("steam_player_group_size", str(steam.get_num_lobby_members(self.lobby_id)))
-        dbg(f"SetRichPresence connect={self.lobby_id}")
-        print(f'is host? {self.is_host}')
-        if self.is_host:
-            steam.set_rich_presence("steam_display", "#Status_Hosting")
-            dbg(f"SetRichPresence for HOST: connect={self.lobby_id}, steam_display=#Status_Hosting")
-        else:
-            steam.set_rich_presence("steam_display", "")
-            dbg(f"SetRichPresence for CLIENT: connect={self.lobby_id}")
+        steam.set_rich_presence("steam_display", "#Status_Hosting")
 
     def _load_friends_list(self):
         k_EFriendFlagImmediate = 4
