@@ -2,9 +2,9 @@ import json
 import os
 import sys
 
-import i18n
+import imgui
 import pygame
-import pygame_gui as gui
+from imgui.integrations.pygame import PygameRenderer
 
 import steam_wrapper as steam
 import tools
@@ -40,53 +40,48 @@ def main():
     except Exception as e:
         print(f"WARNING: Failed to load/play BGM: {e}")
 
-    i18n.set('load_path', ['resources/languages'])
-    i18n.set('filename_format', 'lang.{locale}.{format}')
-    i18n.set('locale', 'zh')
-    i18n.set('fallback', 'en')
-
     screen_width = 1200
     screen_height = 900
-    flags = pygame.SCALED
+    flags = pygame.OPENGL | pygame.DOUBLEBUF
     screen = pygame.display.set_mode((screen_width, screen_height), flags)
+
+    imgui.create_context()
+    impl = PygameRenderer()
+
+    io = imgui.get_io()
+    io.display_size = screen_width, screen_height
 
     current_state = "STATE_LOGIN"
 
     data = None
 
-    manager = gui.UIManager((screen.get_size()), starting_language='zh',
-                            theme_path=tools.resource_path('resources/themes/theme.json'),
-                            translation_directory_paths=[tools.resource_path('resources/languages')])
-
     while True:
         steam.run_callbacks()
         if current_state == "STATE_LOGIN":
-            login = Login(screen, manager)
+            login = Login(screen, impl)
             next_state = login.run()
-            _cleanup_scene(login, screen)
+            _cleanup_scene(screen)
             current_state = next_state
         elif current_state == "STATE_LOBBY":
-            lobby = Lobby(screen, manager, current_player)
+            lobby = Lobby(screen, impl, current_player)
             next_state, data = lobby.run()
-            _cleanup_scene(lobby, screen)
+            _cleanup_scene(screen)
             current_state = next_state
         elif current_state == 'STATE_GAME':
-            game = PlayScreen(screen, manager, data, current_player)
-            _cleanup_scene(game, screen)
+            game = PlayScreen(screen, impl, data, current_player)
+            _cleanup_scene(screen)
             # current_state = next_state
         elif current_state == "STATE_QUIT":
             print('exit game because of quit state')
             break
 
     print("Exiting application.")
+    impl.shutdown()
     pygame.quit()
     sys.exit()
 
 
-def _cleanup_scene(obj, screen):
-    if hasattr(obj, "manager") and obj.manager is not None:
-        obj.manager.clear_and_reset()
-
+def _cleanup_scene(screen):
     screen.fill((0, 0, 0))
     pygame.display.flip()
     pygame.event.clear()
