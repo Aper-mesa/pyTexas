@@ -38,28 +38,26 @@ class Login:
         return None
 
     def draw_ui(self):
-        """绘制 ImGui UI，逻辑不变"""
         imgui.new_frame()
         io = imgui.get_io()
         width, height = io.display_size
-        imgui.push_style_var(imgui.STYLE_WINDOW_ROUNDING, 8.0)
+        imgui.push_style_var(imgui.STYLE_WINDOW_ROUNDING, 80.0)
         imgui.push_style_var(imgui.STYLE_WINDOW_PADDING, (20, 20))
 
-        window_width, window_height = 500, 300
-        imgui.set_next_window_position((width - window_width) / 2, (height - window_height) / 2)
-        imgui.set_next_window_size(window_width, window_height)
+        imgui.set_next_window_position(0,0)
+        imgui.set_next_window_size(width, height)
         imgui.begin("Login", False,
-                    flags=imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_TITLE_BAR)
+                    flags=imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_BACKGROUND)
 
-        imgui.dummy(0, 20)
-        info_text = self._get_text("info")
+        imgui.dummy(0, height / 2 - 200)
+        info_text = self._get_text("login_title")
         text_width = imgui.calc_text_size(info_text).x
-        imgui.set_cursor_pos_x((window_width - text_width) / 2)
+        imgui.set_cursor_pos_x((width - text_width) / 2)
         imgui.text(info_text)
-        imgui.dummy(0, 40)
+        imgui.dummy(0, 200)
 
-        button_width, button_height = 200, 50
-        imgui.set_cursor_pos_x((window_width - button_width) / 2)
+        button_width, button_height = 400, 140
+        imgui.set_cursor_pos_x((width - button_width) / 2)
         imgui.push_style_color(imgui.COLOR_BUTTON, 0.2, 0.6, 0.9, 1.0)
         imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.3, 0.7, 1.0, 1.0)
         imgui.push_style_color(imgui.COLOR_BUTTON_ACTIVE, 0.1, 0.5, 0.8, 1.0)
@@ -72,10 +70,10 @@ class Login:
         imgui.end()
         imgui.pop_style_var(2)
 
-        imgui.set_next_window_position(10, 10)
+        imgui.set_next_window_position(50, 50)
         imgui.set_next_window_size(120, 60)
         imgui.begin("Language", False,
-                    flags=imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_TITLE_BAR)
+                    flags=imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_BACKGROUND)
         if imgui.button(self._get_text("switch_lang"), 100, 40): pass
         imgui.end()
 

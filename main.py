@@ -40,7 +40,7 @@ def main():
     except Exception as e:
         print(f"WARNING: Failed to load/play BGM: {e}")
 
-    screen_width = 1200
+    screen_width = 1600
     screen_height = 900
     flags = pygame.OPENGL | pygame.DOUBLEBUF
     screen = pygame.display.set_mode((screen_width, screen_height), flags)
