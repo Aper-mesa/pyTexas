@@ -1,7 +1,7 @@
 import time
 
+import imgui
 import pygame as g
-import pygame_gui as gui
 
 import player
 import steam_wrapper as steam
@@ -33,13 +33,13 @@ def _after_leave_lobby():
 
 
 class Lobby:
-    def __init__(self, screen, manager, current_player: player.Player, max_members: int = 9):
+    def __init__(self, screen, impl, current_player: player.Player, max_members: int = 9):
         print("Lobby init")
         self._received_room = None
 
         self.screen = screen
         self.clock = g.time.Clock()
-        self.manager = manager
+        self.impl = impl
         self.running = True
 
         self.current_player = current_player
@@ -59,73 +59,19 @@ class Lobby:
         self._callbacks = []
         self._install_callbacks()
 
-        # ---------- UI ----------
-        w, h = self.screen.get_size()
-        self._w, self._h = w, h  # 记录，供是否需要 relayout 判断
-
-        # 先占位，具体 rect 在 _relayout() 里计算
-        self.title_label = gui.elements.UILabel(
-            relative_rect=g.Rect(0, 0, 0, 0), text="Lobby", manager=self.manager
-        )
-
-        self.create_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(0, 0, 0, 0), text="创建公开大厅", manager=self.manager
-        )
-
-        self.invite_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(0, 0, 0, 0), text="邀请好友加入", manager=self.manager
-        )
-
-        self.leave_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(0, 0, 0, 0), text="离开大厅", manager=self.manager
-        )
-
-        self.members_list = gui.elements.UISelectionList(
-            relative_rect=g.Rect(0, 0, 0, 0), item_list=[], manager=self.manager
-        )
-
-        self.status_label = gui.elements.UILabel(
-            relative_rect=g.Rect(0, 0, 0, 0),
-            text=f"你好 {self.my_name} ({self.my_steamid})",
-            manager=self.manager,
-        )
+        self.status_message = f"你好 {self.my_name} ({self.my_steamid})"
+        self.member_list_display = []  # 用于 ImGui 列表显示
 
         self.is_host = False
-        self.minBet = 1
-        self.initBet = 50
+        # ImGui InputText 最好使用字符串
+        self.minBet_str = "1"
+        self.initBet_str = "50"
 
-        bottom_y = self.screen.get_height() - 120
-        group_w = 480
-        group_x = (self.screen.get_width() - group_w) // 2
-
-        self.ui_min_bet = gui.elements.UITextEntryLine(
-            relative_rect=g.Rect(group_x, bottom_y, 120, 36),
-            manager=self.manager,
-            placeholder_text="minBet"
-        )
-        self.ui_min_bet.set_text(str(self.minBet))
-
-        self.ui_init_bet = gui.elements.UITextEntryLine(
-            relative_rect=g.Rect(group_x + 140, bottom_y, 120, 36),
-            manager=self.manager,
-            placeholder_text="initBet"
-        )
-        self.ui_init_bet.set_text(str(self.initBet))
-
-        self.ui_start_btn = gui.elements.UIButton(
-            relative_rect=g.Rect(group_x + 280, bottom_y, 200, 36),
-            text="开始游戏",
-            manager=self.manager
-        )
-
-        for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
-            el.hide()
-
-        self.invite_btn.disable()
-
-        self.leave_btn.disable()
-
-        self._relayout()
+        # 用于控制 ImGui 元素的启用/禁用/可见性
+        self.create_btn_enabled = True
+        self.invite_btn_enabled = False
+        self.leave_btn_enabled = False
+        self.host_controls_visible = False
 
         self._load_friends_list()
 
@@ -164,46 +110,6 @@ class Lobby:
         self._set_status(f"收到游戏房间数据，准备开始...")
         dbg("[Lobby] Room 对象已接收，等待进入游戏")
 
-    def _relayout(self):
-        w, h = self.screen.get_size()
-        cx = w // 2
-
-        # 尺寸参数（可按喜好微调）
-        title_w, title_h = int(w * 0.23), int(h * 0.05)
-        btn_w, btn_h = int(w * 0.14), int(h * 0.05)
-        gap = int(w * 0.015)
-
-        # 顶部标题
-        self.title_label.set_relative_position((cx - title_w // 2, int(h * 0.03)))
-        self.title_label.set_dimensions((title_w, title_h))
-
-        # 顶部三按钮水平排布
-        total_w = btn_w * 3 + gap * 2
-        btn_y = int(h * 0.10)
-        start_x = cx - total_w // 2
-        self.create_btn.set_relative_position((start_x, btn_y))
-        self.create_btn.set_dimensions((btn_w, btn_h))
-
-        self.invite_btn.set_relative_position((start_x + btn_w + gap, btn_y))
-        self.invite_btn.set_dimensions((btn_w, btn_h))
-
-        self.leave_btn.set_relative_position((start_x + (btn_w + gap) * 2, btn_y))
-        self.leave_btn.set_dimensions((btn_w, btn_h))
-
-        # 成员列表居中，宽约 60% 屏幕，高约 60% 屏幕
-        list_w, list_h = int(w * 0.62), int(h * 0.60)
-        list_x = cx - list_w // 2
-        list_y = int(h * 0.18)
-        self.members_list.set_relative_position((list_x, list_y))
-        self.members_list.set_dimensions((list_w, list_h))
-
-        # 底部状态栏
-        status_w, status_h = int(w * 0.6), int(h * 0.04)
-        status_x = cx - status_w // 2
-        status_y = list_y + list_h + int(h * 0.02)
-        self.status_label.set_relative_position((status_x, status_y))
-        self.status_label.set_dimensions((status_w, status_h))
-
     # ---------- Steam Callbacks ----------
     def _install_callbacks(self):
         def on_lobby_created(data):
@@ -214,9 +120,7 @@ class Lobby:
 
                 # --- 房主专属逻辑 ---
                 self.is_host = True
-                for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
-                    el.show()
-                    el.enable()
+                self.host_controls_visible = True
 
                 # --- 调用公共设置函数 ---
                 _on_joined_lobby_common(self)
@@ -226,15 +130,13 @@ class Lobby:
 
         def _on_joined_lobby_common(self):
             """无论是创建还是加入Lobby成功后，都应执行的通用逻辑"""
-            self.leave_btn.enable()
-            self.create_btn.disable()
-            self.invite_btn.enable()
+            self.leave_btn_enabled = True
+            self.create_btn_enabled = False
+            self.invite_btn_enabled = True
 
             self._push_my_member_data()
-
             self._refresh_members_list()
             self._refresh_member_names()
-
             self._after_enter_lobby()
 
             if self.is_host:
@@ -252,11 +154,9 @@ class Lobby:
             self._set_status(f"已进入Lobby：{self.lobby_id}")
 
             # --- 客户端专属逻辑 ---
-            # 如果不是通过创建路径进入，则确定不是房主
             if not getattr(self, "is_host", False):
                 self.is_host = False
-                for el in (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn):
-                    el.hide()
+                self.host_controls_visible = False
 
             # --- 调用公共设置函数 ---
             _on_joined_lobby_common(self)
@@ -381,6 +281,7 @@ class Lobby:
             raw = steam.get_lobby_member_data(self.lobby_id, steam_id, "player")
 
             s = raw.decode("utf-8", "ignore") if raw else ""
+            if not len(s.split(",", 3)) == 3: continue
             name, steam_id, money = s.split(",", 3)
             p = player.Player(steam_id, name, money)
             p.money = int(money)
@@ -389,15 +290,13 @@ class Lobby:
         return res
 
     def _refresh_members_list(self):
-        try:
-            players = self._collect_players()
-            items = [f"{p.username} | {p.steam_id} | ¥{p.money}" for p in players]
-            self.members_list.set_item_list(items)
-        except Exception:
-            pass
+        players = self._collect_players()
+        items = [f"{p.username} | {p.steam_id} | ¥{p.money}" for p in players]
+        # 修改：更新 UI 状态变量
+        self.member_list_display = items
 
     def _set_status(self, msg: str):
-        self.status_label.set_text(msg)
+        self.status_message = msg
 
     def _after_enter_lobby(self):
         steam.set_rich_presence("connect", str(self.lobby_id))
@@ -420,7 +319,7 @@ class Lobby:
 
     def _refresh_member_names(self):
         if not self.lobby_id:
-            self.members_list.set_item_list([])
+            self.member_list_display = []
             return
         count = steam.get_num_lobby_members(self.lobby_id)
         names = []
@@ -433,7 +332,7 @@ class Lobby:
                 display = (p or b"Unknown").decode("utf-8", "ignore")
             names.append(display)
         self.member_names = names
-        self.members_list.set_item_list(names)
+        self.member_list_display = names
         dbg(f"members[{len(self.member_names)}]: {self.member_names}")
         # 刷新成员列表后，同步人数到 Rich Presence
         if self.lobby_id:
@@ -456,93 +355,159 @@ class Lobby:
     def leave_lobby(self):
         if self.lobby_id:
             steam.leave_lobby(self.lobby_id)
-            self.invite_btn.disable()
+            # 修改：更新 UI 状态变量
+            self.invite_btn_enabled = False
             self.is_host = False
-            controls = (self.ui_min_bet, self.ui_init_bet, self.ui_start_btn)
-            self.create_btn.enable()
-            self.leave_btn.disable()
-            for el in controls:
-                el.disable()
-                el.hide()
+            self.create_btn_enabled = True
+            self.leave_btn_enabled = False
+            self.host_controls_visible = False
+
             _after_leave_lobby()
             self._set_status("已离开Lobby")
             self.lobby_id = 0
-            self.members_list.set_item_list([])
+            # 修改：更新 UI 状态变量
+            self.member_list_display = []
 
-    def handle_events(self):
-        steam.run_callbacks()
-        for event in g.event.get():
-            if event.type == g.QUIT:
-                self.running = False
-                return "STATE_QUIT", None
+    def draw_ui(self):
+        """使用 ImGui 绘制大厅界面"""
+        w, h = self.screen.get_size()
 
-            self.manager.process_events(event)
+        # 使用一个全屏、固定的窗口作为背景
+        imgui.set_next_window_position(0, 0)
+        imgui.set_next_window_size(w, h)
+        imgui.begin(
+            "LobbyWindow",
+            flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_COLLAPSE
+        )
 
-            if event.type == gui.UI_BUTTON_PRESSED:
-                if event.ui_element == self.create_btn:
-                    self.create_public_lobby()
-                elif event.ui_element == self.invite_btn:
-                    self.invite_friends_via_overlay()
-                elif event.ui_element == self.leave_btn:
-                    self.leave_lobby()
-                elif event.ui_element == self.ui_start_btn:
-                    self.minBet = int(self.ui_min_bet.get_text().strip())
-                    self.initBet = int(self.ui_init_bet.get_text().strip())
+        # 1. 标题
+        # (可以根据需要调整字体大小)
+        imgui.text("Lobby")
+        imgui.separator()
 
+        # 2. 顶部按钮
+        # 按钮宽度 (大致模仿 _relayout)
+        btn_w = int(w * 0.14)
+
+        # 根据 UI 状态变量设置按钮是否禁用
+        if self.create_btn_enabled and imgui.button("create lobby", width=btn_w):
+            self.create_public_lobby()
+
+        imgui.same_line()
+        if self.invite_btn_enabled and imgui.button("invite friends", width=btn_w):
+            self.invite_friends_via_overlay()
+
+        imgui.same_line()
+        if self.leave_btn_enabled and imgui.button("leave lobby", width=btn_w):
+            self.leave_lobby()
+
+        imgui.spacing()
+
+        # 3. 成员列表
+        # (大致模仿 _relayout 尺寸)
+        list_w = int(w * 0.62)
+        list_h = int(h * 0.60)
+        imgui.begin_child("member_list_frame", width=list_w, height=list_h, border=True)
+        if not self.member_list_display:
+            imgui.text("Lobby 为空")
+        else:
+            for item_str in self.member_list_display:
+                imgui.text(item_str)
+        imgui.end_child()
+
+        # 4. 状态标签
+        imgui.text(self.status_message)
+
+        # 5. 房主控制 (仅在 self.host_controls_visible 为 True 时绘制)
+        if self.host_controls_visible:
+            # (大致模仿 _relayout 布局)
+            bottom_y = h - 60  # ImGui 坐标系可能略有不同，调整y值
+            group_w = 480
+            group_x = (w - group_w) // 2
+
+            imgui.set_cursor_pos((group_x, bottom_y))
+
+            imgui.push_item_width(120)
+            # ImGui InputText 返回 (changed, value) 元组
+            # 使用 INPUT_TEXT_CHARS_DECIMAL 标志只允许输入数字
+            changed, self.minBet_str = imgui.input_text(
+                "minBet", self.minBet_str, 6, flags=imgui.INPUT_TEXT_CHARS_DECIMAL
+            )
+            imgui.pop_item_width()
+
+            imgui.same_line(spacing=20)
+            imgui.push_item_width(120)
+            changed, self.initBet_str = imgui.input_text(
+                "initBet", self.initBet_str, 6, flags=imgui.INPUT_TEXT_CHARS_DECIMAL
+            )
+            imgui.pop_item_width()
+
+            imgui.same_line(spacing=20)
+            if imgui.button("开始游戏", width=200):
+                # --- 这是原 handle_events 中的开始游戏逻辑 ---
+                try:
+                    minBet_int = int(self.minBet_str.strip() or "1")
+                    initBet_int = int(self.initBet_str.strip() or "50")
+                except ValueError:
+                    self._set_status("错误: minBet 和 initBet 必须是数字")
+                else:
                     players_list = self._collect_players()
-                    room = Room([players_list, self.minBet, self.initBet])
+                    room = Room([players_list, minBet_int, initBet_int])
 
                     ts = int(time.time())
-                    payload = f"{self.minBet},{self.initBet},{ts}".encode("utf-8")
+                    payload = f"{minBet_int},{initBet_int},{ts}".encode("utf-8")
                     steam.set_lobby_data(self.lobby_id, "start", payload)
                     steam.set_lobby_joinable(self.lobby_id, False)
 
+                    # 设置此项，run() 循环将在下一帧检测到并切换状态
                     self._received_room = room
-                    self._start_payload = (self.minBet, self.initBet, ts)
+                    self._start_payload = (minBet_int, initBet_int, ts)
 
                     dbg("[Lobby] 房主已创建并广播 Room，准备进入游戏")
-                    return None, None
 
-            if event.type == g.VIDEORESIZE:
-                new_w, new_h = event.w, event.h
-                if (new_w, new_h) != (self._w, self._h):
-                    self._w, self._h = new_w, new_h
-                    self._relayout()
-
-        return None
-
-    def draw(self):
-        self.screen.fill((245, 245, 245))
-        dt = self.clock.tick(60) / 1000.0
-
-        # 统一跑回调（或在 main 里跑也可以，二选一）
-        steam.run_callbacks()
-
-        self.manager.update(dt)
-        self.manager.draw_ui(self.screen)
-        g.display.flip()
+        imgui.end()  # 结束 "LobbyWindow"
 
     def run(self):
         while self.running:
             steam.run_callbacks()
-            # ===== 修改：统一检查是否收到 Room 对象 =====
+            for event in g.event.get():
+                if event.type == g.QUIT:
+                    self.running = False
+                    return "STATE_QUIT", None
+                self.impl.process_event(event)
+
+            # --- ImGui 新一帧 ---
+            self.impl.process_inputs()
+            imgui.new_frame()
+
+            # --- 绘制 UI ---
+            self.draw_ui()
+
+            # --- 渲染 ---
+            # 1. 清屏
+            self.screen.fill((0, 0, 0))
+            # 2. 渲染 ImGui
+            imgui.render()
+            self.impl.render(imgui.get_draw_data())
+            # 3. 更新 Pygame 显示
+            g.display.flip()
+
+            # --- 状态切换检查 (来自原始 run() 方法) ---
             if self._received_room:
                 dbg("[Lobby] 检测到 Room 对象，启动游戏")
                 room = self._received_room
                 self._received_room = None  # 清空以避免重复进入
                 return "STATE_GAME", room
-            # 旧方式兼容（通过 Lobby 数据）
+
             if self._start_payload:
                 minBet, initBet, ts = self._start_payload
-                # 如果还没有 Room 对象，用旧方式创建
-                if not hasattr(self, '_received_room') or not self._received_room:
+                # 如果还没有 Room 对象（例如房主自己），用旧方式创建
+                if not self._received_room:
                     players = self._collect_players()
                     room = Room([players, minBet, initBet])
+                    self._start_payload = None  # 清空以避免重复进入
                     return "STATE_GAME", room
-            ret = self.handle_events()
-            if ret:
-                next_state, data = ret
-                if next_state:
-                    return next_state, data
-            self.draw()
-        return "STATE_QUIT", None
+
+            # --- 帧率控制 ---
+            self.clock.tick(60)
+        return None
