@@ -265,7 +265,7 @@ class Lobby:
         username = getattr(self.current_player, "username", getattr(self.current_player, "persona_name", ""))
         steam_id = str(self.current_player.steam_id)
         money = int(getattr(self.current_player, "money", 0))
-        payload = f"{username},{steam_id},{money}".encode("utf-8")
+        payload = f"{username},{steam_id},{money}"
         # 注意：这里使用你项目里已经绑定好的 matchmaking 句柄/函数名
         steam.set_lobby_member_data(self.lobby_id, "player", payload)
 
@@ -443,7 +443,7 @@ class Lobby:
             imgui.pop_item_width()
 
             imgui.same_line(spacing=20)
-            if imgui.button("开始游戏", width=200):
+            if imgui.button("Start Game", width=200):
                 # --- 这是原 handle_events 中的开始游戏逻辑 ---
                 try:
                     minBet_int = int(self.minBet_str.strip() or "1")
@@ -455,7 +455,7 @@ class Lobby:
                     room = Room([players_list, minBet_int, initBet_int])
 
                     ts = int(time.time())
-                    payload = f"{minBet_int},{initBet_int},{ts}".encode("utf-8")
+                    payload = f"{minBet_int},{initBet_int},{ts}"
                     steam.set_lobby_data(self.lobby_id, "start", payload)
                     steam.set_lobby_joinable(self.lobby_id, False)
 
