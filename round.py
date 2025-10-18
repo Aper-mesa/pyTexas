@@ -2,7 +2,8 @@ from random import choice  # For choosing the host
 from random import shuffle  # For shuffling the deck of cards
 
 import pygame
-import pygame_gui as gui
+import imgui
+from OpenGL.GL import glClear, GL_COLOR_BUFFER_BIT, glClearColor
 
 import card  # Import the Card class for creating card instances
 import config  # Import configuration with card type/rank definitions
@@ -358,242 +359,211 @@ class Room:
 
 
 class PlayScreen:
-
-    def __init__(self, screen, manager, room, localPlayer):
+    def __init__(self, screen, impl, room, localPlayer):
         self.screen = screen
-        self.manager = manager
+        self.impl = impl  # 保持变量名一致性，renderer 即 impl
         self.clock = pygame.time.Clock()
         self.screen_width, self.screen_height = screen.get_size()
-        self.player = localPlayer
+
         self.room = room
+        self.player = localPlayer
 
-        cardPool = CardPool()
-        for i in range(2): self.player.handCards.append(cardPool.getNextCard())
-
-        self.renderPlayers()
-        self.renderBetDisplay()
-        self.renderCardSlots()
-        self.renderPublicCards()
-        self.renderBetPoolDisplay()
-
-        running = True
-        while running:
-            time_delta = self.clock.tick(60) / 1000.0
-
+    def run(self):
+        while True:
+            # --- 事件处理 ---
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
-                self.manager.process_events(event)
+                    return "STATE_QUIT"
+                self.impl.process_event(event)
 
-            self.manager.update(time_delta)
+            # --- ImGui 新一帧 ---
+            self.impl.process_inputs()
+            imgui.new_frame()
 
-            self.screen.fill((255, 255, 255))
+            # --- 绘制所有UI元素 ---
+            self.draw_ui()
 
-            self.manager.draw_ui(self.screen)
+            # --- 渲染 ---
+            # 仿照 Login.py，使用 OpenGL 清屏，解决画面残留问题
+            # 设置清屏颜色 (R, G, B, A)，这里将 (20, 20, 20) 转换到 0-1 范围
+            glClearColor(20 / 255.0, 20 / 255.0, 20 / 255.0, 1.0)
+            # 执行清屏
+            glClear(GL_COLOR_BUFFER_BIT)
 
-            pygame.display.update()
+            imgui.render()
+            self.impl.render(imgui.get_draw_data())
+            pygame.display.flip()
 
-        pygame.quit()
+            self.clock.tick(60)
 
-    def getPublicCards(self):
-        # if self.t
-        # cardPool = CardPool()
-        # return [cardPool.getNextCard() for _ in range(5)]
-        return self.room.publicCardPool
+    def draw_ui(self):
+        """在每一帧绘制所有 ImGui 界面元素"""
+        # 创建一个覆盖全屏的、不可交互的背景窗口
+        imgui.set_next_window_position(0, 0)
+        imgui.set_next_window_size(self.screen_width, self.screen_height)
+        imgui.begin(
+            "PlayScreenBackground",
+            flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE |
+                  imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_COLLAPSE |
+                  imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS
+        )
 
-    def getBetPool(self):
-        return self.room.betPool
+        # 调用各个部分的绘制函数
+        self._draw_players_list()
+        self._draw_info_display()
+        self._draw_public_cards()
+        self._draw_player_hand()
+        self._draw_action_buttons()
 
-    def getPlayerNames(self):
+        imgui.end()
+
+    def _draw_players_list(self):
+        """绘制左上角的玩家列表"""
+        container_width = self.screen_width * 0.25
+        container_height = self.screen_height * 0.5
+
+        imgui.set_next_window_position(20, 20)
+        imgui.set_next_window_size(container_width, container_height)
+
+        imgui.begin("Players", flags=imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
+
+        imgui.text("Players in Room")
+        imgui.separator()
+
         players = self.room.activePlayers
-        playerData = []
+        positions = self.room.getDealerAndTwoPartners()
 
         for player in players:
-            playerData.append({
-                "name": player.username,
-                "chips": player.money,
-                "ip": player.steam_id
-            })
+            player_info = f"{player.username} | Chips: {player.money}"
+            player_id_str = str(player.steam_id)
 
-        return playerData
+            if player_id_str in positions:
+                player_info = f"({positions[player_id_str]}) {player_info}"
 
-    def renderBetDisplay(self):
-        bet_box_width = self.screen_width * 0.2
-        bet_box_height = 60
-        bet_box_x = self.screen_width - bet_box_width - 20
-        bet_box_y = 20
+            imgui.text(player_info)
+            imgui.spacing()
 
-        bet_container = gui.elements.UIPanel(
-            relative_rect=pygame.Rect(
-                (bet_box_x, bet_box_y),
-                (bet_box_width, bet_box_height)
-            ),
-            manager=self.manager,
-            starting_height=1,
-            object_id="#bet_container"
-        )
+        imgui.end()
 
-        current_bet = self.player.money if self.player else 0
-        gui.elements.UILabel(
-            relative_rect=pygame.Rect((10, 10), (bet_box_width - 20, 40)),
-            text=f"{current_bet} $",
-            manager=self.manager,
-            container=bet_container
-        )
+    def _draw_info_display(self):
+        """绘制右上角的个人筹码和总奖池信息"""
+        info_width = self.screen_width * 0.2
+        info_height = 80
 
-    def renderBetPoolDisplay(self):
-        bet_box_width = self.screen_width * 0.2
-        bet_box_height = 60
-        bet_box_x = self.screen_width - bet_box_width - 20
-        bet_box_y = 80
+        imgui.set_next_window_position(self.screen_width - info_width - 20, 20)
+        imgui.set_next_window_size(info_width, info_height)
 
-        bet_container = gui.elements.UIPanel(
-            relative_rect=pygame.Rect(
-                (bet_box_x, bet_box_y),
-                (bet_box_width, bet_box_height)
-            ),
-            manager=self.manager,
-            starting_height=1,
-            object_id="#bet_pool_container"
-        )
+        imgui.begin("Game Info", flags=imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_TITLE_BAR)
 
-        current_bet = self.getBetPool()
-        gui.elements.UILabel(
-            relative_rect=pygame.Rect((10, 10), (bet_box_width - 20, 40)),
-            text=f"{current_bet} $",
-            manager=self.manager,
-            container=bet_container
-        )
+        chips_text = f"Your Chips: {self.player.money} $"
+        pot_text = f"Total Pot: {self.room.betPool} $"
 
-    def renderCardSlots(self):
-        slot_width = 70
-        slot_height = int(slot_width * 1.4)
-        spacing = 12
-        total_width = (slot_width * 2) + (spacing * 2)
-        start_x = (self.screen_width - total_width) // 2
-        start_y = self.screen_height - slot_height - 40
+        imgui.text(chips_text)
+        imgui.text(pot_text)
 
-        for i in range(2):
-            slot_x = start_x + i * (slot_width + spacing)
-            card_slot = gui.elements.UIPanel(
-                relative_rect=pygame.Rect(
-                    (slot_x, start_y),
-                    (slot_width, slot_height)
-                ),
-                manager=self.manager,
-                starting_height=1,
-                object_id="#card_slot"
-            )
-            if (len(self.player.handCards) - 1) >= i:
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((5, 5), (slot_width - 10, slot_height - 10)),
-                    text=str(self.player.handCards[i]),
-                    manager=self.manager,
-                    container=card_slot
-                )
-            else:
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((5, 5), (slot_width - 10, slot_height - 10)),
-                    text="*",
-                    manager=self.manager,
-                    container=card_slot
-                )
+        imgui.end()
 
-    def renderPublicCards(self):
+    def _draw_public_cards(self):
+        """绘制桌子中间的公共牌"""
         card_width = 64
         card_height = int(card_width * 1.4)
         spacing = 12
-        publicCards = self.getPublicCards()
-        n = len(publicCards) if len(publicCards) > 0 else 1
-        total_width = card_width * n + spacing * (n - 1)
-        start_x = (self.screen_width - total_width) // 2
-        y = (self.screen_height // 2) - (card_height // 2)
+        num_cards = 5
 
-        for i in range(n):
-            card_x = start_x + i * (card_width + spacing)
-            card_container = gui.elements.UIPanel(
-                relative_rect=pygame.Rect(
-                    (card_x, y),
-                    (card_width, card_height)
-                ),
-                manager=self.manager,
-                starting_height=1,
-                object_id="#public_card_container"
-            )
-            if i < len(publicCards):
-                if publicCards[i]:
-                    gui.elements.UILabel(
-                        relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
-                        text=str(publicCards[i]),
-                        manager=self.manager,
-                        container=card_container
-                    )
-                else:
-                    gui.elements.UILabel(
-                        relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
-                        text="?",
-                        manager=self.manager,
-                        container=card_container
-                    )
-            else:
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((5, 5), (card_width - 10, card_height - 10)),
-                    text="Card Not Found",
-                    manager=self.manager,
-                    container=card_container
-                )
+        total_width = (card_width * num_cards) + (spacing * (num_cards - 1))
+        start_x = (self.screen_width - total_width) / 2
+        y = (self.screen_height - card_height) / 2
 
-    def renderPlayers(self):
-        container_width = self.screen_width * 0.3
-        container_x = 20
-        container_y = 20
-        container_height = self.screen_height * 0.6
+        public_cards = self.room.publicCardPool
 
-        positions = self.room.getDealerAndTwoPartners()
+        # 创建一个无边框、无背景的窗口来容纳这些牌，以便精确定位
+        imgui.set_next_window_position(start_x, y)
+        imgui.set_next_window_size(total_width * 1.2, card_height * 2)
+        imgui.begin("PublicCardsContainer",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_BACKGROUND | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_RESIZE)
 
-        scroll_container = gui.elements.UIScrollingContainer(
-            relative_rect=pygame.Rect(
-                (container_x, container_y),
-                (container_width, container_height)
-            ),
-            manager=self.manager,
-            object_id="#players_scroll_container"
-        )
+        for i in range(num_cards):
+            if i > 0:
+                imgui.same_line(spacing=spacing)
 
-        box_width = container_width - 40
-        box_height = 40
+            imgui.begin_child(f"public_card_{i}", width=card_width, height=card_height, border=True)
+
+            card_text = "?"
+            if i < len(public_cards) and public_cards[i]:
+                card_text = str(public_cards[i])
+
+            text_width, text_height = imgui.calc_text_size(card_text)
+            imgui.set_cursor_pos(((card_width - text_width) / 2, (card_height - text_height) / 2))
+            imgui.text(card_text)
+
+            imgui.end_child()
+
+        imgui.end()
+
+    def _draw_player_hand(self):
+        """绘制屏幕下方的玩家手牌"""
+        slot_width = 70
+        slot_height = int(slot_width * 1.4)
+        spacing = 12
+        num_cards = 2
+
+        total_width = (slot_width * num_cards) + spacing
+        start_x = (self.screen_width - total_width) / 2
+        start_y = self.screen_height - slot_height - 80  # 向上移动一点为按钮留空间
+
+        imgui.set_next_window_position(start_x, start_y)
+        imgui.set_next_window_size(total_width * 1.2, slot_height * 2)
+        imgui.begin("PlayerHandContainer",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_BACKGROUND | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_RESIZE)
+
+        for i in range(num_cards):
+            if i > 0:
+                imgui.same_line(spacing=spacing)
+
+            imgui.begin_child(f"hand_card_{i}", width=slot_width, height=slot_height, border=True)
+
+            card_text = "*"
+            if i < len(self.player.handCards) and self.player.handCards[i]:
+                card_text = str(self.player.handCards[i])
+
+            text_width, text_height = imgui.calc_text_size(card_text)
+            imgui.set_cursor_pos(((slot_width - text_width) / 2, (slot_height - text_height) / 2))
+            imgui.text(card_text)
+
+            imgui.end_child()
+
+        imgui.end()
+
+    def _draw_action_buttons(self):
+        """绘制右下角的操作按钮"""
+        button_width = 100
+        button_height = 40
         spacing = 15
-        start_y = 10
 
-        players = self.getPlayerNames()
-        print(players)
+        # 使用一个窗口容器来组织按钮，方便定位
+        actions_width = (button_width * 4) + (spacing * 3)
+        actions_height = button_height
+        start_x = self.screen_width - actions_width - 20
+        start_y = self.screen_height - actions_height - 20
 
-        for i, player in enumerate(players):
-            y_pos = start_y + i * (box_height + spacing)
+        imgui.set_next_window_position(start_x, start_y)
+        imgui.set_next_window_size(actions_width * 1.2, actions_height * 2)
+        imgui.begin("Actions",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_BACKGROUND | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
 
-            panel = gui.elements.UIPanel(
-                relative_rect=pygame.Rect((20, y_pos), (box_width, box_height)),
-                manager=self.manager,
-                starting_height=1,
-                object_id="#player_panel",
-                container=scroll_container
-            )
+        if imgui.button("Call", width=button_width, height=button_height):
+            print("Action: Call")
 
-            ip = player['ip']
-            if not ip in positions:
+        imgui.same_line(spacing=spacing)
+        if imgui.button("Raise", width=button_width, height=button_height):
+            print("Action: Raise")
 
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((10, 10), (box_width - 20, 25)),
-                    text=f"{player['name']}    {player['chips']} $",
-                    manager=self.manager,
-                    container=panel
-                )
-            else:
-                gui.elements.UILabel(
-                    relative_rect=pygame.Rect((10, 10), (box_width - 20, 25)),
-                    text=f"{positions[ip]} {player['name']}    {player['chips']} $",
-                    manager=self.manager,
-                    container=panel
-                )
-        total_height = start_y + len(players) * (box_height + spacing) + 10
-        scroll_container.set_scrollable_area_dimensions((box_width + 40, total_height))
+        imgui.same_line(spacing=spacing)
+        if imgui.button("All-in", width=button_width, height=button_height):
+            print("Action: All-in")
+
+        imgui.same_line(spacing=spacing)
+        if imgui.button("Fold", width=button_width, height=button_height):
+            print("Action: Fold")
+
+        imgui.end()

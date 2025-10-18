@@ -17,7 +17,20 @@ import player
 def main():
     running_dir = tools.resource_path('.')
     os.chdir(running_dir)
-    steam.init()
+    try:
+        steam.init()
+    except RuntimeError as e:
+        print(e)
+        pygame.init()
+        screen = pygame.display.set_mode((1280, 720))
+        font = pygame.font.Font(None, 36)
+        error_text = font.render("SteamAPI_Init() failed. Is Steam running and is steam_appid.txt present?", True,
+                                 (255, 0, 0))
+        text_rect = error_text.get_rect(center=(1280 / 2, 720 / 2))
+        screen.blit(error_text, text_rect)
+        pygame.display.flip()
+        pygame.time.wait(5000)
+        return
 
     if not os.path.exists('data'): os.mkdir('data')
     sid = steam.get_my_steam_id()
@@ -52,40 +65,36 @@ def main():
     io.display_size = screen_width, screen_height
 
     current_state = "STATE_LOGIN"
+    data_for_next_state = None  # 用于在状态间传递数据
 
-    data = None
-
-    while True:
-        steam.run_callbacks()
+    running = True
+    while running:
         if current_state == "STATE_LOGIN":
             login = Login(screen, impl)
-            next_state = login.run()
-            _cleanup_scene(screen)
-            current_state = next_state
+            current_state = login.run()
+
         elif current_state == "STATE_LOBBY":
             lobby = Lobby(screen, impl, current_player)
-            next_state, data = lobby.run()
-            _cleanup_scene(screen)
+            next_state, data_for_next_state = lobby.run()
             current_state = next_state
+
         elif current_state == 'STATE_GAME':
-            game = PlayScreen(screen, impl, data, current_player)
-            _cleanup_scene(screen)
-            # current_state = next_state
+            if data_for_next_state:
+                game = PlayScreen(screen, impl, data_for_next_state, current_player)
+                current_state = game.run()
+            else:
+                print("Error: Tried to enter GAME state without room data. Returning to LOBBY.")
+                current_state = "STATE_LOBBY"
+
         elif current_state == "STATE_QUIT":
-            print('exit game because of quit state')
-            break
+            print('Exit game because of quit state')
+            running = False
 
     print("Exiting application.")
     impl.shutdown()
+    steam.shutdown()
     pygame.quit()
     sys.exit()
-
-
-def _cleanup_scene(screen):
-    screen.fill((0, 0, 0))
-    pygame.display.flip()
-    pygame.event.clear()
-
 
 if __name__ == "__main__":
     main()

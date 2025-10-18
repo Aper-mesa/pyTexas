@@ -1,7 +1,6 @@
 #include "steam_wrapper_api.h"
 #include "steam_callback_helpers.h"
 
-// --- Generic Handler Macro ---
 #define MAKE_HANDLER(name, type) \
 class name##Handler { \
 public: \
@@ -16,7 +15,6 @@ private: \
 void* new_##name##_handler(SteamCallback* obj) { return new name##Handler(obj); } \
 void del_##name##_handler(void* handler) { delete static_cast<name##Handler*>(handler); }
 
-// --- Create Handlers for each callback type ---
 MAKE_HANDLER(lobby_created, LobbyCreated_t)
 MAKE_HANDLER(lobby_enter, LobbyEnter_t)
 MAKE_HANDLER(lobby_chat_update, LobbyChatUpdate_t)
