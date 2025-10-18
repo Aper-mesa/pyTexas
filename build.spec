@@ -23,7 +23,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='pyTexas-0.5.10.17.1',
+    name='pyTexas-0.5.10.18.1',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

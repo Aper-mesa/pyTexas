@@ -33,7 +33,7 @@ def _after_leave_lobby():
 
 
 class Lobby:
-    def __init__(self, screen, impl, current_player: player.Player, max_members: int = 9):
+    def __init__(self, screen, impl, current_player: player.Player, max_members: int = 9, auto_join_id: int = None):
         print("Lobby init")
         self._received_room = None
 
@@ -52,22 +52,19 @@ class Lobby:
         self.lobby_id = 0
         self.member_names = []
         self._friend_ids = []
-
-        self._start_payload = None  # 保存开局参数（min/init 等）
-        self._start_seen_ts = 0  # 避免重复触发
+        self._start_payload = None
+        self._start_seen_ts = 0
 
         self._callbacks = []
         self._install_callbacks()
 
         self.status_message = f"你好 {self.my_name} ({self.my_steamid})"
-        self.member_list_display = []  # 用于 ImGui 列表显示
+        self.member_list_display = []
 
         self.is_host = False
-        # ImGui InputText 最好使用字符串
         self.minBet_str = "1"
         self.initBet_str = "50"
 
-        # 用于控制 ImGui 元素的启用/禁用/可见性
         self.create_btn_enabled = True
         self.invite_btn_enabled = False
         self.leave_btn_enabled = False
@@ -75,22 +72,28 @@ class Lobby:
 
         self._load_friends_list()
 
-        try:
-            val = steam.get_launch_query_param("connect")
-            if val:
-                s = val.decode('utf-8', 'ignore').strip()
-                dbg(f"launch connect param='{s}'")
-                for prefix in ("lobby:", "connect=", "steam://joinlobby/"):
-                    if s.startswith(prefix):
-                        s = s[len(prefix):]
-                lobby_id = int(s)
-                steam.join_lobby(lobby_id)
-                self._set_status(f"启动参数 Join -> 加入 Lobby {lobby_id} ...")
-                dbg(f"JoinLobby via launch param: {lobby_id}")
-        except Exception as e:
-            dbg(f"parse launch connect failed: {e}")
-        dbg(f"overlay enabled? {bool(steam.is_overlay_enabled())}")
+        # --- 关键修改：检查是否有 auto_join_id，如果有则自动加入 ---
+        if auto_join_id:
+            dbg(f"Auto-joining lobby {auto_join_id} from main process...")
+            steam.join_lobby(auto_join_id)
+            self._set_status(f"收到邀请，正在加入 Lobby {auto_join_id} ...")
+        else:
+            # 原有的启动参数检查逻辑，只在没有自动加入时执行
+            try:
+                val = steam.get_launch_query_param("connect")
+                if val:
+                    s = val.decode('utf-8', 'ignore').strip()
+                    dbg(f"launch connect param='{s}'")
+                    for prefix in ("lobby:", "connect=", "steam://joinlobby/"):
+                        if s.startswith(prefix): s = s[len(prefix):]
+                    lobby_id = int(s)
+                    steam.join_lobby(lobby_id)
+                    self._set_status(f"启动参数 Join -> 加入 Lobby {lobby_id} ...")
+                    dbg(f"JoinLobby via launch param: {lobby_id}")
+            except Exception as e:
+                dbg(f"parse launch connect failed: {e}")
 
+        dbg(f"overlay enabled? {bool(steam.is_overlay_enabled())}")
         _after_leave_lobby()
         self._set_status(f"你好 {self.my_name} ({self.my_steamid})")
         dbg("Initial Rich Presence cleared on lobby entry.")
